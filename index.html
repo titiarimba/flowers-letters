@@ -9,26 +9,17 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600&display=swap" rel="stylesheet">
 <script>
-// PAYLOAD SCHEMA v1 — append-only. Never rename a key. Never change what a key means.
+// PAYLOAD SCHEMA v1 — append-only. Never rename a key or change its meaning.
 // Always default missing keys, so v1 links still open in v9.
 //   v — schema version
 //   o — opening line        b — body        s — sign-off        f — bloom name
-const DEFAULTS = { v: 1, o: '', b: '', s: '', f: 'hibiscus' };
-
-// A link carries the payload as base64url JSON in the hash: #<payload>
-// Anything unreadable falls back to an empty object, so a mangled link still opens.
-const decoded = (() => {
-  const raw = location.hash.slice(1);
-  if (!raw) return {};
-  try {
-    const b64 = raw.replace(/-/g, '+').replace(/_/g, '/');
-    const json = decodeURIComponent(escape(atob(b64)));
-    const obj = JSON.parse(json);
-    return obj && typeof obj === 'object' ? obj : {};
-  } catch { return {}; }
-})();
-
-const config = { ...DEFAULTS, ...decoded };
+const DEFAULTS = {
+  v: 1,
+  o: 'hi,',
+  b: "this is a tiny reminder that you're special to me.\n\nTake care, smile a little, and think of me sometimes",
+  s: 'always,',
+  f: 'hibiscus'
+};
 </script>
 <style>
 /* ============================================================
@@ -275,6 +266,108 @@ body{
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{ transition-duration:.001ms !important; animation-duration:.001ms !important; }
 }
+
+/* ============================================================
+   Compose modal — Phase 3 addition, appended only.
+   Nothing above this block was changed.
+   ============================================================ */
+
+.write-own{
+  border:1px solid rgba(43,35,28,.22); background:var(--paper);
+  color:#41352a; font:600 15px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  padding:.7em 1.4em; border-radius:999px; cursor:pointer;
+  transition:transform .3s var(--ease), box-shadow .3s;
+}
+.write-own:hover{ transform:translateY(-1px); box-shadow:0 6px 14px rgba(76,52,30,.16); }
+.write-own:focus-visible{ outline:2px solid #2b231c; outline-offset:3px; }
+
+body.compose-open{ overflow:hidden; }
+
+.compose-backdrop{
+  position:fixed; inset:0; z-index:50;
+  background:rgba(41,32,22,.45); backdrop-filter:blur(2px);
+}
+.compose-backdrop[hidden]{ display:none; }
+
+.compose-modal{
+  position:fixed; inset:0; z-index:51;
+  display:flex; align-items:center; justify-content:center;
+  padding:clamp(.75rem,4vw,2rem);
+  overflow-y:auto;
+}
+.compose-modal[hidden]{ display:none; }
+
+.compose-panel{
+  position:relative; width:min(94vw,880px); max-height:90vh; overflow-y:auto;
+  background:var(--paper); border-radius:16px;
+  padding:clamp(1.25rem,4vw,2rem);
+  box-shadow:0 24px 60px rgba(41,32,22,.35);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  color:#41352a;
+}
+
+.compose-x{
+  position:absolute; top:.9rem; right:.9rem;
+  width:32px; height:32px; border-radius:50%; border:1px solid rgba(43,35,28,.18);
+  background:transparent; color:#41352a; font-size:1.3rem; line-height:1; cursor:pointer;
+}
+.compose-x:hover{ background:rgba(43,35,28,.06); }
+.compose-x:focus-visible{ outline:2px solid #2b231c; outline-offset:2px; }
+
+.compose-title{ margin:0 2.4rem .9rem 0; font-size:1.3rem; }
+
+.compose-grid{ display:grid; grid-template-columns:1fr 1fr; gap:clamp(1rem,3vw,2rem); align-items:start; }
+
+.compose-field{ margin-bottom:1rem; }
+.compose-field-head{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:.35rem; }
+.compose-field-head label,
+.compose-field-head span:first-child{ font-size:.85rem; font-weight:600; }
+.compose-count{ font-size:.75rem; color:#8a7357; }
+.compose-count.is-warn{ color:#b5651d; }
+
+.compose-form input[type="text"],
+.compose-form textarea,
+.compose-link input[type="text"]{
+  width:100%; font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  color:#41352a; background:#fff; border:1px solid rgba(43,35,28,.2); border-radius:8px;
+  padding:.55em .7em; resize:vertical;
+}
+.compose-form input[type="text"]:focus-visible,
+.compose-form textarea:focus-visible,
+.compose-link input[type="text"]:focus-visible{
+  outline:2px solid #2b231c; outline-offset:1px;
+}
+
+.compose-create,
+.compose-copy,
+.compose-back{
+  border:1px solid rgba(43,35,28,.22); background:#2b231c; color:#fbf4e6;
+  font:600 15px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  padding:.65em 1.3em; border-radius:999px; cursor:pointer; margin-top:.25rem;
+}
+.compose-create:hover, .compose-copy:hover, .compose-back:hover{ opacity:.88; }
+.compose-create:focus-visible, .compose-copy:focus-visible, .compose-back:focus-visible{
+  outline:2px solid #2b231c; outline-offset:3px;
+}
+
+.compose-link-actions{ display:flex; align-items:center; gap:.9rem; flex-wrap:wrap; margin:.6rem 0; }
+.compose-preview-link{ color:#7a5a36; font-size:.9rem; }
+.compose-preview-link:focus-visible{ outline:2px solid #2b231c; outline-offset:2px; }
+.compose-copy-status{ font-size:.85rem; color:#5b7a4d; }
+
+.compose-preview-wrap{
+  width:calc(var(--stage) * .58); height:calc(var(--stage) * .58);
+  margin:0 auto; overflow:hidden;
+  display:flex; align-items:center; justify-content:center;
+}
+.compose-preview-wrap .scene{ transform:scale(.58); }
+
+@media (max-width:719px){
+  .compose-grid{ grid-template-columns:1fr; }
+  .compose-right{ order:-1; margin-bottom:.5rem; }
+  .compose-preview-wrap{ width:calc(var(--stage) * .46); height:calc(var(--stage) * .46); }
+  .compose-preview-wrap .scene{ transform:scale(.46); }
+}
 </style>
 </head>
 <body>
@@ -467,18 +560,114 @@ body{
     <p class="sr-sign"></p>
   </div>
 
-  <div class="blooms">
-    <button class="swatch" data-bloom-set="hibiscus" aria-pressed="true"  aria-label="Hibiscus"
-            style="background:conic-gradient(#ffd479,#f2872f,#e04a35,#ab1f4e,#ffd479)"></button>
-    <button class="swatch" data-bloom-set="poppy" aria-pressed="false" aria-label="Poppy"
-            style="background:conic-gradient(#ffc3a0,#ef4f2c,#cd2320,#3d1417,#ffc3a0)"></button>
-    <button class="swatch" data-bloom-set="cosmos" aria-pressed="false" aria-label="Cosmos"
-            style="background:conic-gradient(#fff2f7,#ef8fba,#d95291,#7e2159,#fff2f7)"></button>
-    <button class="swatch" data-bloom-set="magnolia" aria-pressed="false" aria-label="Magnolia"
-            style="background:conic-gradient(#fffbf0,#eccb92,#d79f61,#96592c,#fffbf0)"></button>
-  </div>
+  <button class="write-own" id="writeOwnBtn" type="button">Write your own</button>
 
 </main>
+
+<!-- ===================== compose modal ===================== -->
+<div class="compose-backdrop" id="composeBackdrop" hidden></div>
+<div class="compose-modal" id="composeModal" role="dialog" aria-modal="true" aria-labelledby="composeTitle" hidden>
+  <div class="compose-panel">
+    <button class="compose-x" id="composeCloseBtn" type="button" aria-label="Close">&times;</button>
+    <h2 class="compose-title" id="composeTitle">Write your own</h2>
+
+    <div class="compose-grid">
+      <div class="compose-left">
+
+        <div class="compose-form" id="composeFormView">
+          <div class="compose-field">
+            <div class="compose-field-head">
+              <label for="fieldOpen">Opening</label>
+              <span class="compose-count" id="countOpen">0 / 40</span>
+            </div>
+            <input type="text" id="fieldOpen" maxlength="40" placeholder="hi,">
+          </div>
+
+          <div class="compose-field">
+            <div class="compose-field-head">
+              <label for="fieldBody">Body</label>
+              <span class="compose-count" id="countBody">0 / 500</span>
+            </div>
+            <textarea id="fieldBody" rows="6" maxlength="500"></textarea>
+          </div>
+
+          <div class="compose-field">
+            <div class="compose-field-head">
+              <label for="fieldSign">Signature</label>
+              <span class="compose-count" id="countSign">0 / 40</span>
+            </div>
+            <input type="text" id="fieldSign" maxlength="40" placeholder="always,">
+          </div>
+
+          <div class="compose-field">
+            <div class="compose-field-head"><span>Flower</span></div>
+            <div class="blooms" id="composeBlooms">
+              <button class="swatch" data-bloom-set="hibiscus" aria-pressed="true"  aria-label="Hibiscus"
+                      style="background:conic-gradient(#ffd479,#f2872f,#e04a35,#ab1f4e,#ffd479)"></button>
+              <button class="swatch" data-bloom-set="poppy" aria-pressed="false" aria-label="Poppy"
+                      style="background:conic-gradient(#ffc3a0,#ef4f2c,#cd2320,#3d1417,#ffc3a0)"></button>
+              <button class="swatch" data-bloom-set="cosmos" aria-pressed="false" aria-label="Cosmos"
+                      style="background:conic-gradient(#fff2f7,#ef8fba,#d95291,#7e2159,#fff2f7)"></button>
+              <button class="swatch" data-bloom-set="magnolia" aria-pressed="false" aria-label="Magnolia"
+                      style="background:conic-gradient(#fffbf0,#eccb92,#d79f61,#96592c,#fffbf0)"></button>
+            </div>
+          </div>
+
+          <button class="compose-create" id="composeCreateBtn" type="button">Create link</button>
+        </div>
+
+        <div class="compose-link" id="composeLinkView" hidden>
+          <div class="compose-field">
+            <div class="compose-field-head"><label for="linkOutput">Your link</label></div>
+            <input type="text" id="linkOutput" readonly>
+          </div>
+          <div class="compose-link-actions">
+            <button class="compose-copy" id="copyLinkBtn" type="button">Copy link</button>
+            <a class="compose-preview-link" id="previewLinkBtn" href="#" target="_blank" rel="noopener noreferrer">Preview what they'll see</a>
+            <span class="compose-copy-status" id="copyStatus" aria-live="polite"></span>
+          </div>
+          <button class="compose-back" id="backToEditBtn" type="button">Back to editing</button>
+        </div>
+
+      </div>
+
+      <div class="compose-right">
+        <div class="compose-preview-wrap">
+          <div class="scene" id="previewScene" role="button" tabindex="0"
+               aria-expanded="false"
+               aria-label="Preview flower. Activate to unfold it into a letter.">
+            <div class="sheet" id="previewSheet">
+              <div class="core" data-letter></div>
+
+              <div class="flap f-nw">
+                <div class="face face-letter" data-letter></div>
+                <div class="face face-bloom" data-bloom></div>
+              </div>
+              <div class="flap f-ne">
+                <div class="face face-letter" data-letter></div>
+                <div class="face face-bloom" data-bloom></div>
+              </div>
+              <div class="flap f-se">
+                <div class="face face-letter" data-letter></div>
+                <div class="face face-bloom" data-bloom></div>
+              </div>
+              <div class="flap f-sw">
+                <div class="face face-letter" data-letter></div>
+                <div class="face face-bloom" data-bloom></div>
+              </div>
+
+              <div class="fringe f-nw" data-bloom></div>
+              <div class="fringe f-ne" data-bloom></div>
+              <div class="fringe f-se" data-bloom></div>
+              <div class="fringe f-sw" data-bloom></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
 
 <script>
 (() => {
@@ -510,7 +699,7 @@ body{
       document.querySelectorAll(`.lc-${part}, .sr-${part}`)
         .forEach(el => { el.textContent = text; });
     }
-    refit();                                // new copy rewraps: resize to the sheet
+    queueRefit();                           // new copy rewraps: resize to the sheet, debounced
   }
 
   /* Size the handwriting to the sheet in both directions: a long letter is
@@ -543,7 +732,53 @@ body{
     fitPending = requestAnimationFrame(refit);
   };
 
-  render(DEFAULTS);
+  /* ---------- shareable link ----------
+     The letter travels in the URL hash as base64url JSON: #<payload>. The
+     hash is never sent to the server, which is the whole privacy property
+     of this design — never move this to a query string. TextEncoder /
+     TextDecoder (not btoa(JSON.stringify(x))) are what let this survive
+     emoji and non-Latin text. */
+  function toBase64Url(bytes) {
+    let bin = '';
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function fromBase64Url(str) {
+    const b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+    const pad = b64.length % 4 ? '='.repeat(4 - (b64.length % 4)) : '';
+    const bin = atob(b64 + pad);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  }
+
+  function encode(config) {
+    return toBase64Url(new TextEncoder().encode(JSON.stringify(config)));
+  }
+
+  // Malformed input throws here — callers decide how to handle it, this
+  // function never swallows the error.
+  function decode(str) {
+    const bytes = fromBase64Url(str);
+    const json = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    const obj = JSON.parse(json);
+    if (!obj || typeof obj !== 'object') throw new TypeError('payload is not an object');
+    return obj;
+  }
+
+  // Always returns a valid, safe config; never throws. `f` is checked
+  // against BLOOMS below, once that table exists.
+  function sanitize(raw) {
+    const src = raw && typeof raw === 'object' ? raw : {};
+    const clamp = (v, fallback, max) => (typeof v === 'string' ? v : fallback).slice(0, max);
+    return {
+      v: DEFAULTS.v,
+      o: clamp(src.o, DEFAULTS.o, 40),
+      b: clamp(src.b, DEFAULTS.b, 500),
+      s: clamp(src.s, DEFAULTS.s, 40),
+      f: typeof src.f === 'string' && src.f in BLOOMS ? src.f : DEFAULTS.f
+    };
+  }
 
   /* ---------- the fold ---------- */
   const scene = document.getElementById('scene');
@@ -592,6 +827,242 @@ body{
 
   document.querySelectorAll('[data-bloom-set]').forEach(btn => {
     btn.addEventListener('click', () => applyBloom(btn.dataset.bloomSet));
+  });
+
+  /* A small, dismissible notice for a hash that couldn't be read. Styled
+     inline rather than in the stylesheet — this is a temporary, JS-driven
+     affordance, not part of the page's design. */
+  function showLinkNotice() {
+    const bar = document.createElement('div');
+    bar.setAttribute('role', 'status');
+    bar.style.cssText = 'position:fixed;left:50%;bottom:1.2rem;transform:translateX(-50%);'
+      + 'display:flex;align-items:center;gap:.7rem;padding:.55rem 1rem;border-radius:10px;'
+      + 'background:var(--paper);border:1px solid rgba(43,35,28,.18);color:#41352a;'
+      + 'font:14px/1.3 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;'
+      + 'box-shadow:0 8px 20px rgba(76,52,30,.18);z-index:10;';
+    const msg = document.createElement('span');
+    msg.textContent = "This letter's link seems incomplete.";
+    const dismiss = document.createElement('button');
+    dismiss.type = 'button';
+    dismiss.textContent = 'Dismiss';
+    dismiss.style.cssText = 'border:0;background:none;color:#8a6a44;font:inherit;'
+      + 'text-decoration:underline;cursor:pointer;padding:0;';
+    dismiss.addEventListener('click', () => bar.remove());
+    bar.append(msg, dismiss);
+    document.body.appendChild(bar);
+  }
+
+  // Reads location.hash and decides what to show. No hash (or a bare #)
+  // renders DEFAULTS. A malformed hash is caught here — never left to
+  // surface as a blank page or an uncaught console error.
+  function boot() {
+    const raw = location.hash.slice(1);
+    let config = DEFAULTS;
+    if (raw) {
+      try {
+        config = sanitize(decode(raw));
+      } catch {
+        showLinkNotice();
+      }
+    }
+    render(config);
+    applyBloom(config.f);
+  }
+  boot();
+
+  /* ---------- temporary: run window.__selftest() in the console ---------- */
+  window.__selftest = function () {
+    const results = [];
+    const check = (name, pass) => results.push({ name, pass });
+    const deepEqual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+    const roundtripCases = [
+      { v: 1, o: 'hi,', b: 'plain ascii body', s: 'always,', f: 'hibiscus' },
+      { v: 1, o: 'sayang,', b: 'Jaga diri ya 🌺', s: 'selalu,', f: 'poppy' },
+      { v: 1, o: 'こんにちは', b: '大切なあなたへ、いつも笑顔でいてね。', s: 'いつも、', f: 'cosmos' },
+      { v: 1, o: 'hi,', b: 'x'.repeat(500), s: 'always,', f: 'magnolia' },
+      { v: 1, o: '', b: '', s: '', f: 'hibiscus' }
+    ];
+    roundtripCases.forEach((x, i) => {
+      try { check(`roundtrip[${i}]`, deepEqual(decode(encode(x)), x)); }
+      catch { check(`roundtrip[${i}]`, false); }
+    });
+
+    try {
+      const truncated = encode({ v: 1, o: 'hi,', b: 'x'.repeat(80), s: 'always,', f: 'hibiscus' }).slice(0, -10);
+      let threw = false;
+      try { decode(truncated); } catch { threw = true; }
+      check('truncated payload is caught, not thrown to caller code', threw);
+    } catch { check('truncated payload is caught, not thrown to caller code', false); }
+
+    try {
+      const s = sanitize({ b: 'x'.repeat(9999), f: 'nonsense' });
+      check('sanitize clamps body to 500 and falls back to hibiscus', s.b.length === 500 && s.f === 'hibiscus');
+    } catch { check('sanitize clamps body to 500 and falls back to hibiscus', false); }
+
+    let allPass = true;
+    results.forEach(r => {
+      console.log(`${r.pass ? 'PASS' : 'FAIL'} — ${r.name}`);
+      if (!r.pass) allPass = false;
+    });
+    console.log(allPass ? 'all tests passed' : 'some tests failed');
+    return allPass;
+  };
+
+  /* ---------- compose modal ---------- */
+  const writeOwnBtn     = document.getElementById('writeOwnBtn');
+  const composeBackdrop = document.getElementById('composeBackdrop');
+  const composeModal    = document.getElementById('composeModal');
+  const composeCloseBtn = document.getElementById('composeCloseBtn');
+  const composeFormView = document.getElementById('composeFormView');
+  const composeLinkView = document.getElementById('composeLinkView');
+  const composeCreateBtn = document.getElementById('composeCreateBtn');
+  const backToEditBtn   = document.getElementById('backToEditBtn');
+  const copyLinkBtn     = document.getElementById('copyLinkBtn');
+  const previewLinkBtn  = document.getElementById('previewLinkBtn');
+  const linkOutput      = document.getElementById('linkOutput');
+  const copyStatus      = document.getElementById('copyStatus');
+  const fieldOpen = document.getElementById('fieldOpen');
+  const fieldBody = document.getElementById('fieldBody');
+  const fieldSign = document.getElementById('fieldSign');
+  const countOpen = document.getElementById('countOpen');
+  const countBody = document.getElementById('countBody');
+  const countSign = document.getElementById('countSign');
+
+  const OPEN_MAX = 40, BODY_MAX = 500, SIGN_MAX = 40;   // mirrors sanitize()'s own clamps
+
+  function clampField(el, max) {
+    if (el.value.length > max) el.value = el.value.slice(0, max);
+  }
+  function updateCount(el, counterEl, max) {
+    const len = el.value.length;
+    counterEl.textContent = `${len} / ${max}`;
+    counterEl.classList.toggle('is-warn', len / max >= .9);
+  }
+  function composedConfig() {
+    const pressed = document.querySelector('#composeBlooms [data-bloom-set][aria-pressed="true"]');
+    return {
+      v: DEFAULTS.v,
+      o: fieldOpen.value,
+      b: fieldBody.value,
+      s: fieldSign.value,
+      f: pressed ? pressed.dataset.bloomSet : DEFAULTS.f
+    };
+  }
+  function updateLivePreview() {
+    clampField(fieldOpen, OPEN_MAX);
+    clampField(fieldBody, BODY_MAX);
+    clampField(fieldSign, SIGN_MAX);
+    updateCount(fieldOpen, countOpen, OPEN_MAX);
+    updateCount(fieldBody, countBody, BODY_MAX);
+    updateCount(fieldSign, countSign, SIGN_MAX);
+    render(composedConfig());               // one global config: this also redraws the
+  }                                          // hidden main sheet, which is why closing
+                                              // the modal has to restore it (see below)
+  [fieldOpen, fieldBody, fieldSign].forEach(el => el.addEventListener('input', updateLivePreview));
+
+  /* Reads back whatever is currently on the page — DEFAULTS or a decoded
+     shared letter — so cancelling the modal restores it exactly. */
+  function currentRenderedConfig() {
+    const pressed = document.querySelector('[data-bloom-set][aria-pressed="true"]');
+    return {
+      v: DEFAULTS.v,
+      o: document.querySelector('.sr-open').textContent,
+      b: document.querySelector('.sr-body').textContent,
+      s: document.querySelector('.sr-sign').textContent,
+      f: pressed ? pressed.dataset.bloomSet : DEFAULTS.f
+    };
+  }
+
+  function focusableIn(container) {
+    return Array.from(container.querySelectorAll(
+      'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )).filter(el => el.offsetParent !== null);
+  }
+
+  function onComposeKeydown(e) {
+    if (e.key === 'Escape') { e.preventDefault(); closeCompose(); return; }
+    if (e.key !== 'Tab') return;
+    const items = focusableIn(composeModal);
+    if (!items.length) return;
+    const first = items[0], last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+
+  let restoreFocusTo = null;
+  let restoreConfig  = null;
+
+  function openCompose() {
+    restoreFocusTo = document.activeElement;
+    restoreConfig = currentRenderedConfig();
+    composeBackdrop.hidden = false;
+    composeModal.hidden = false;
+    document.body.classList.add('compose-open');
+    document.addEventListener('keydown', onComposeKeydown);
+    updateLivePreview();
+    fieldOpen.focus();
+  }
+
+  function closeCompose() {
+    composeModal.hidden = true;
+    composeBackdrop.hidden = true;
+    composeLinkView.hidden = true;
+    composeFormView.hidden = false;
+    document.body.classList.remove('compose-open');
+    document.removeEventListener('keydown', onComposeKeydown);
+    if (restoreConfig) { render(restoreConfig); applyBloom(restoreConfig.f); }
+    (restoreFocusTo || writeOwnBtn).focus();
+  }
+
+  writeOwnBtn.addEventListener('click', openCompose);
+  composeCloseBtn.addEventListener('click', closeCompose);
+  composeBackdrop.addEventListener('click', closeCompose);
+
+  /* the preview flower folds on its own, independent of the main scene */
+  const previewScene = document.getElementById('previewScene');
+  const previewSheet = document.getElementById('previewSheet');
+  function togglePreviewFold() {
+    const open = !previewSheet.classList.contains('open');
+    previewSheet.classList.toggle('open', open);
+    previewScene.setAttribute('aria-expanded', String(open));
+    previewScene.setAttribute('aria-label', open
+      ? 'Open letter. Activate to fold it back into a flower.'
+      : 'Preview flower. Activate to unfold it into a letter.');
+  }
+  previewScene.addEventListener('click', togglePreviewFold);
+  previewScene.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePreviewFold(); }
+  });
+
+  composeCreateBtn.addEventListener('click', () => {
+    const config = sanitize(composedConfig());
+    const url = location.origin + location.pathname + '#' + encode(config);
+    linkOutput.value = url;
+    previewLinkBtn.href = url;
+    composeFormView.hidden = true;
+    composeLinkView.hidden = false;
+    linkOutput.focus();
+    linkOutput.select();
+  });
+
+  backToEditBtn.addEventListener('click', () => {
+    composeLinkView.hidden = true;
+    composeFormView.hidden = false;
+    fieldOpen.focus();
+  });
+
+  let copyStatusTimer = 0;
+  copyLinkBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(linkOutput.value);
+      copyStatus.textContent = 'Copied!';
+    } catch {
+      linkOutput.select();                  // Safari-safe fallback: text is ready to Cmd/Ctrl+C
+      copyStatus.textContent = 'Selected — press Ctrl/Cmd+C to copy';
+    }
+    clearTimeout(copyStatusTimer);
+    copyStatusTimer = setTimeout(() => { copyStatus.textContent = ''; }, 2500);
   });
 
   /* the square changes size with the viewport, and Caveat lands late */
