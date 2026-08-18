@@ -1,0 +1,5 @@
+wrangler.toml
+.gitignore
+.assetsignore
+node_modules
+.git
