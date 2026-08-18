@@ -1018,6 +1018,10 @@ body.compose-open{ overflow:hidden; }
   writeOwnBtn.addEventListener('click', openCompose);
   composeCloseBtn.addEventListener('click', closeCompose);
   composeBackdrop.addEventListener('click', closeCompose);
+  /* .compose-modal is a full-viewport flex container stacked above
+     .compose-backdrop, so it — not the backdrop — receives clicks in the
+     dimmed area outside .compose-panel; close only when it's the target. */
+  composeModal.addEventListener('click', e => { if (e.target === composeModal) closeCompose(); });
 
   /* the preview flower folds on its own, independent of the main scene */
   const previewScene = document.getElementById('previewScene');
