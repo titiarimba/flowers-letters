@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paper Bloom</title>
+<meta name="description" content="A square of paper, four corners folded to the middle, a hibiscus drawn across the face. Open it and it's a letter.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600&display=swap" rel="stylesheet">
+<script>
+// PAYLOAD SCHEMA v1 — append-only. Never rename a key. Never change what a key means.
+// Always default missing keys, so v1 links still open in v9.
+//   v — schema version
+//   o — opening line        b — body        s — sign-off        f — bloom name
+const DEFAULTS = { v: 1, o: '', b: '', s: '', f: 'hibiscus' };
+
+// A link carries the payload as base64url JSON in the hash: #<payload>
+// Anything unreadable falls back to an empty object, so a mangled link still opens.
+const decoded = (() => {
+  const raw = location.hash.slice(1);
+  if (!raw) return {};
+  try {
+    const b64 = raw.replace(/-/g, '+').replace(/_/g, '/');
+    const json = decodeURIComponent(escape(atob(b64)));
+    const obj = JSON.parse(json);
+    return obj && typeof obj === 'object' ? obj : {};
+  } catch { return {}; }
+})();
+
+const config = { ...DEFAULTS, ...decoded };
+</script>
+<style>
+/* ============================================================
+   Paper Bloom
+   A blintz-folded square: four corner triangles hinge onto a
+   centre diamond. The letter is on their fronts, the hibiscus
+   on their backs — so opening it splits the flower into
+   quarters and swings them away.
+   ============================================================ */
+
+@property --fold { syntax: '<angle>'; inherits: false; initial-value: 180deg; }
+@property --peel { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+
+:root{
+  /* paper + ink */
+  --paper:      #fbf4e6;
+  --paper-warm: #f3e8d2;
+  --page:       #efe7d8;
+  --page-2:     #e7ddca;
+
+  /* hibiscus (default bloom) */
+  --petal-rim:  #ffd479;
+  --petal-tip:  #fdb63f;
+  --petal-mid:  #f2872f;
+  --petal-in:   #e04a35;
+  --petal-core: #ab1f4e;
+  --vein:       #c2384c;
+  --stamen:     #f6c445;
+  --leaf:       #55794a;
+  --leaf-2:     #375b35;
+
+  --ease: cubic-bezier(.19,.87,.28,1);
+  /* --S is the folded square itself. The bloom is drawn 1.4x that and
+     overhangs the paper on every side, so the stage reserves 1.6x. */
+  --S: clamp(190px, min(56vmin, 44vh), 500px);
+  --stage: calc(var(--S) * 1.7);
+}
+
+*,*::before,*::after{ box-sizing:border-box; }
+
+body{
+  margin:0;
+  min-height:100vh;
+  min-height:100svh;
+  display:grid;
+  place-items:center;
+  background:
+    radial-gradient(120% 90% at 50% 8%, #f7f0e2 0%, var(--page) 46%, var(--page-2) 100%)
+    fixed;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  overflow-x:hidden;
+}
+
+/* paper grain */
+.grain{
+  position:fixed; inset:0; z-index:9; pointer-events:none;
+  opacity:.42; mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='180' height='180' filter='url(%23n)' opacity='.5'/></svg>");
+}
+
+.sr-only{
+  position:absolute; width:1px; height:1px; margin:-1px; padding:0;
+  overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap;
+}
+
+/* ---------- layout ---------- */
+.page{
+  min-height:100vh; min-height:100svh;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:clamp(1.6rem,4vmin,3rem);
+  padding:clamp(1rem,4vmin,2.5rem);
+}
+
+/* ---------- the stage ---------- */
+/* the stage is larger than the sheet so the overhanging petals and leaves
+   have somewhere to live without colliding with the picker below */
+.scene{
+  width:var(--stage); height:var(--stage);
+  perspective:2400px; perspective-origin:50% 46%;
+  display:grid; place-items:center;
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+  /* the bloom SVGs paint outside their viewBox; without this their bounds
+     leak into the page's scroll area and the viewport gains a scrollbar */
+  overflow:clip;
+}
+.scene:focus-visible{ outline:2px solid var(--petal-in); outline-offset:-4px; border-radius:10px; }
+
+.sheet{
+  position:relative; width:var(--S); height:var(--S);
+  transform-style:preserve-3d;
+  transform:scale(1.05) rotate(-3deg);
+  transition:transform 1.15s var(--ease), filter 1.15s var(--ease);
+  filter:drop-shadow(0 24px 30px rgba(76,52,30,.20)) drop-shadow(0 3px 7px rgba(76,52,30,.13));
+}
+.sheet.open{
+  transform:scale(1) rotate(0deg);
+  filter:drop-shadow(0 16px 30px rgba(76,52,30,.16)) drop-shadow(0 2px 4px rgba(76,52,30,.10));
+}
+
+/* the immobile centre diamond */
+.core{
+  position:absolute; inset:0;
+  clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);
+}
+
+/* corner flaps */
+.flap{
+  position:absolute; inset:0;
+  transform-style:preserve-3d;
+  transform-origin:var(--ox) var(--oy);
+  transform:translateZ(var(--z)) rotate3d(var(--ax),var(--ay),0,calc(var(--fold) * var(--s)));
+  transition:--fold 1s var(--ease) var(--d);
+}
+.sheet.open .flap{ --fold:0deg; }
+
+.face{
+  position:absolute; inset:0;
+  backface-visibility:hidden; -webkit-backface-visibility:hidden;
+}
+/* letter side: the flat corner triangle, in flap-local coordinates */
+.face-letter{ clip-path:var(--clip); }
+/* flower side: pre-rotated so it composes to identity while the flap is
+   folded, which means it is authored in sheet coordinates and clipped to
+   the quarter of the centre diamond that this flap covers when shut. */
+.face-bloom{
+  clip-path:var(--clipd);
+  transform-origin:var(--ox) var(--oy);
+  transform:rotate3d(var(--ax),var(--ay),0,calc(180deg * var(--s)));
+  background:
+    radial-gradient(150% 150% at 50% 50%, rgba(120,88,52,.10) 0%, rgba(120,88,52,0) 46%),
+    radial-gradient(120% 110% at 26% 16%, #fdf8ec 0%, var(--paper) 50%, var(--paper-warm) 100%);
+}
+
+/* Everything of the bloom that falls outside the folded diamond. The clip
+   reaches well past the sheet so petals can overhang the paper entirely —
+   that overhang is what hides the diamond's four corners. */
+.fringe{
+  position:absolute; inset:0;
+  clip-path:var(--clipf);
+  transform-origin:var(--ox) var(--oy);
+  transform:translateZ(2.4px) rotate3d(var(--ax),var(--ay),0,calc(var(--peel) * var(--s) * -1));
+  transition:--peel .95s var(--ease) var(--d), opacity .5s ease-out var(--d);
+}
+.sheet.open .fringe{ --peel:145deg; opacity:0; }
+
+/* per-flap geometry.
+   --clip   outer corner triangle (the flap lying flat)
+   --clipd  quarter of the centre diamond it covers when folded shut
+   --clipf  its share of everything outside the diamond, extended off-sheet
+   --ox/--oy hinge midpoint, --ax/--ay hinge axis, --s fold direction       */
+.f-nw{ --ox:25%; --oy:25%; --ax:-1; --ay:1; --s:1;  --z:1.6px; --d:0ms;
+       --clip:polygon(0 0,50% 0,0 50%);
+       --clipd:polygon(50% 50%,50% 0,0 50%);
+       --clipf:polygon(50% 0,0 50%,-60% 50%,-60% -60%,50% -60%); }
+.f-ne{ --ox:75%; --oy:25%; --ax:1;  --ay:1; --s:-1; --z:1.2px; --d:90ms;
+       --clip:polygon(100% 0,100% 50%,50% 0);
+       --clipd:polygon(50% 50%,50% 0,100% 50%);
+       --clipf:polygon(50% 0,100% 50%,160% 50%,160% -60%,50% -60%); }
+.f-se{ --ox:75%; --oy:75%; --ax:-1; --ay:1; --s:-1; --z:.8px;  --d:180ms;
+       --clip:polygon(100% 100%,50% 100%,100% 50%);
+       --clipd:polygon(50% 50%,100% 50%,50% 100%);
+       --clipf:polygon(100% 50%,50% 100%,50% 160%,160% 160%,160% 50%); }
+.f-sw{ --ox:25%; --oy:75%; --ax:1;  --ay:1; --s:1;  --z:.4px;  --d:270ms;
+       --clip:polygon(0 100%,0 50%,50% 100%);
+       --clipd:polygon(50% 50%,0 50%,50% 100%);
+       --clipf:polygon(0 50%,50% 100%,50% 160%,-60% 160%,-60% 50%); }
+
+/* artwork fills its host exactly, and may spill past it */
+.art{ position:absolute; inset:0; width:100%; height:100%; display:block; overflow:visible; }
+
+/* ---------- petals drift under the cursor ----------
+   Each petal pivots a degree or two about the flower's centre, so the tips
+   swing side to side while the throat stays put.
+   The bloom is painted by eight separate SVGs — four flap backs and four
+   fringes — that together make one flower, so timing is keyed to the petal's
+   index rather than the copy: petal 3 of the fringe and petal 3 of the flap
+   behind it share an amplitude, duration and phase and never drift apart. */
+.sway{ transform-box:view-box; transform-origin:100px 100px; }
+
+.scene:hover .sheet:not(.open) .sway,
+.scene:focus-visible .sheet:not(.open) .sway{
+  animation-name:petal-sway;
+  animation-duration:var(--dur);
+  animation-delay:var(--ph);           /* negative: starts mid-cycle */
+  animation-timing-function:ease-in-out;
+  animation-iteration-count:infinite;
+}
+@keyframes petal-sway{
+  0%,100%{ transform:rotate(calc(var(--amp) * -1)); }
+  50%    { transform:rotate(var(--amp)); }
+}
+.petals > g:nth-child(1) .sway{ --amp:1.5deg; --dur:3.2s; --ph:0s; }
+.petals > g:nth-child(2) .sway{ --amp:1.1deg; --dur:2.7s; --ph:-.9s; }
+.petals > g:nth-child(3) .sway{ --amp:1.7deg; --dur:3.7s; --ph:-1.7s; }
+.petals > g:nth-child(4) .sway{ --amp:1.3deg; --dur:2.9s; --ph:-.4s; }
+.petals > g:nth-child(5) .sway{ --amp:1.6deg; --dur:3.4s; --ph:-2.2s; }
+
+/* ---------- letter face ---------- */
+.lc{
+  position:absolute; inset:0;
+  background:radial-gradient(115% 100% at 30% 12%, #fdf8ec 0%, var(--paper) 44%, var(--paper-warm) 100%);
+  overflow:hidden;
+}
+/* each folded panel catches the light differently */
+.lc::after{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(var(--tilt,150deg),
+    rgba(255,255,255,.5), rgba(255,255,255,0) 52%, rgba(122,90,54,.075));
+}
+.f-nw .lc{ --tilt:132deg; } .f-ne .lc{ --tilt:228deg; }
+.f-se .lc{ --tilt:312deg; } .f-sw .lc{ --tilt:48deg; }
+
+.lc-text{
+  position:absolute; inset:7%;
+  display:flex; align-items:center;
+  font-family:"Caveat","Bradley Hand","Segoe Script",cursive;
+  color:#41352a;
+  /* --fit is trimmed by script so any length of letter stays inside */
+  font-size:calc(var(--S) * .052 * var(--fit,1));
+  line-height:1.46;
+  letter-spacing:.005em;
+  overflow-wrap:break-word;   /* a very long word can't outgrow the sheet */
+  transform:rotate(-1.1deg);
+}
+.lc-inner{ width:100%; }
+.lc-open{ margin:0 0 .3em; }
+.lc-body{ margin:0; white-space:pre-line; }
+.lc-sign{ margin:.9em 0 0; text-align:right; padding-right:5%; }
+.lc-text p{ text-shadow:0 .5px 0 rgba(255,255,255,.5); }
+
+/* ---------- bloom picker ---------- */
+.blooms{ display:flex; align-items:center; gap:.8rem; }
+.swatch{
+  width:28px; height:28px; padding:0; border-radius:50%; cursor:pointer;
+  border:1px solid rgba(43,35,28,.16);
+  box-shadow:inset 0 0 0 2px var(--paper);
+  transition:transform .3s var(--ease), box-shadow .3s;
+}
+.swatch:hover{ transform:scale(1.12); }
+.swatch[aria-pressed="true"]{ box-shadow:inset 0 0 0 2px var(--paper),0 0 0 1.5px #2b231c; }
+.swatch:focus-visible{ outline:2px solid #2b231c; outline-offset:3px; }
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{ transition-duration:.001ms !important; animation-duration:.001ms !important; }
+}
+</style>
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+
+<!-- ===================== templates ===================== -->
+
+<template id="tpl-letter">
+  <div class="lc">
+    <svg class="art" viewBox="0 0 200 200" preserveAspectRatio="none" aria-hidden="true">
+      <defs>
+        <radialGradient id="lcv" cx="34%" cy="16%" r="96%">
+          <stop offset="0%" stop-color="#fff" stop-opacity=".5"/>
+          <stop offset="62%" stop-color="#fff" stop-opacity="0"/>
+          <stop offset="100%" stop-color="#8a6a44" stop-opacity=".14"/>
+        </radialGradient>
+      </defs>
+      <rect width="200" height="200" fill="url(#lcv)"/>
+      <!-- No drawn creases: the only fold this sheet makes is the diamond,
+           and that already reads from the per-panel lighting below. -->
+      <path d="M100 0 200 100 100 200 0 100Z" fill="#8a6a44" opacity=".026"/>
+    </svg>
+    <div class="lc-text">
+      <div class="lc-inner">
+        <p class="lc-open"></p>
+        <p class="lc-body"></p>
+        <p class="lc-sign"></p>
+      </div>
+    </div>
+  </div>
+</template>
+
+<template id="tpl-bloom">
+  <svg class="art" viewBox="0 0 200 200" aria-hidden="true">
+    <defs>
+      <!-- one radial ramp centred on the flower, so every rotated petal
+           reads the same gradient: gold at the rim, crimson in the throat -->
+      <radialGradient id="pg" gradientUnits="userSpaceOnUse" cx="100" cy="100" r="88">
+        <stop offset="0%"   stop-color="var(--petal-core)"/>
+        <stop offset="8%"   stop-color="var(--petal-core)"/>
+        <stop offset="20%"  stop-color="var(--petal-in)"/>
+        <stop offset="60%"  stop-color="var(--petal-mid)"/>
+        <stop offset="88%"  stop-color="var(--petal-tip)"/>
+        <stop offset="100%" stop-color="var(--petal-rim)"/>
+      </radialGradient>
+      <radialGradient id="throat" gradientUnits="userSpaceOnUse" cx="100" cy="100" r="17">
+        <stop offset="0%"   stop-color="var(--petal-core)"/>
+        <stop offset="62%"  stop-color="var(--petal-core)" stop-opacity=".55"/>
+        <stop offset="100%" stop-color="var(--petal-core)" stop-opacity="0"/>
+      </radialGradient>
+
+      <!-- broad hibiscus petal: ruffled outer edge, notched at the tip -->
+      <path id="petal" d="M100 100C84 89 60 85 55 59 50 36 52 16 62 13 70 11 74 16 78 20 82 13 85 12 88 14 93 17 97 21 100 27 103 21 107 17 112 14 115 12 118 13 122 20 126 16 130 11 138 13 148 16 150 36 145 59 140 85 116 89 100 100Z"/>
+      <!-- keeps each petal's pencil strokes inside its own outline -->
+      <clipPath id="pclip"><use href="#petal"/></clipPath>
+
+      <!-- coloured-pencil strokes fanning out of the throat -->
+      <g id="veins" fill="none" stroke="var(--vein)" stroke-linecap="round">
+        <g stroke-opacity=".52" stroke-width="1.1">
+          <path d="M100 100C99 76 100 46 100 16"/>
+          <path d="M100 100C95 77 84 50 72 24"/>
+          <path d="M100 100C105 77 116 50 128 24"/>
+        </g>
+        <g stroke-opacity=".34" stroke-width=".8">
+          <path d="M100 100C97 78 92 50 86 18"/>
+          <path d="M100 100C103 78 108 50 114 18"/>
+          <path d="M100 100C92 79 76 56 60 36"/>
+          <path d="M100 100C108 79 124 56 140 36"/>
+          <path d="M100 100C90 82 70 66 52 54"/>
+          <path d="M100 100C110 82 130 66 148 54"/>
+        </g>
+        <g stroke-opacity=".2" stroke-width=".6">
+          <path d="M100 100C98 77 96 48 94 17"/>
+          <path d="M100 100C102 77 104 48 106 17"/>
+          <path d="M100 100C94 78 80 53 66 30"/>
+          <path d="M100 100C106 78 120 53 134 30"/>
+          <path d="M100 100C91 81 73 61 56 45"/>
+          <path d="M100 100C109 81 127 61 144 45"/>
+        </g>
+      </g>
+
+      <!-- soft shadow where the next petal laps over this one -->
+      <linearGradient id="lap" gradientUnits="userSpaceOnUse" x1="56" y1="52" x2="96" y2="82">
+        <stop offset="0%"   stop-color="var(--petal-core)" stop-opacity=".15"/>
+        <stop offset="100%" stop-color="var(--petal-core)" stop-opacity="0"/>
+      </linearGradient>
+
+      <!-- drawn pointing straight down; the copies below swing it out to the
+           diagonals, the only directions with room past the bloom -->
+      <g id="oneleaf">
+        <path d="M100 104C119 125 127 160 100 204 73 160 81 125 100 104Z" fill="var(--leaf)"/>
+        <path d="M100 112 100 198" fill="none" stroke="var(--leaf-2)" stroke-opacity=".55" stroke-width="1.2"/>
+        <g fill="none" stroke="var(--leaf-2)" stroke-opacity=".3" stroke-width=".75">
+          <path d="M100 132 113 126M100 132 87 126M100 152 118 145M100 152 82 145M100 172 113 166M100 172 87 166"/>
+        </g>
+      </g>
+    </defs>
+
+    <!-- Scaled past the sheet so the bloom overhangs the folded paper on
+         every side — no corner of the letter shows. Set slightly
+         off-square, like a hand drew it. -->
+    <g transform="translate(100 100) rotate(-13) scale(1.4) translate(-100 -100)">
+      <g class="leaves">
+        <use href="#oneleaf" transform="rotate(58 100 100)" opacity=".92"/>
+        <use href="#oneleaf" transform="rotate(-32 100 100)"/>
+      </g>
+
+      <g class="petals">
+        <g transform="rotate(0 100 100)">
+          <g class="sway"><use href="#petal" fill="url(#pg)"/><use href="#petal" fill="url(#lap)"/><g clip-path="url(#pclip)"><use href="#veins"/></g><use href="#petal" fill="none" stroke="var(--petal-in)" stroke-opacity=".34" stroke-width="1"/></g>
+        </g>
+        <g transform="rotate(72 100 100)">
+          <g class="sway"><use href="#petal" fill="url(#pg)"/><use href="#petal" fill="url(#lap)"/><g clip-path="url(#pclip)"><use href="#veins"/></g><use href="#petal" fill="none" stroke="var(--petal-in)" stroke-opacity=".34" stroke-width="1"/></g>
+        </g>
+        <g transform="rotate(144 100 100)">
+          <g class="sway"><use href="#petal" fill="url(#pg)"/><use href="#petal" fill="url(#lap)"/><g clip-path="url(#pclip)"><use href="#veins"/></g><use href="#petal" fill="none" stroke="var(--petal-in)" stroke-opacity=".34" stroke-width="1"/></g>
+        </g>
+        <g transform="rotate(216 100 100)">
+          <g class="sway"><use href="#petal" fill="url(#pg)"/><use href="#petal" fill="url(#lap)"/><g clip-path="url(#pclip)"><use href="#veins"/></g><use href="#petal" fill="none" stroke="var(--petal-in)" stroke-opacity=".34" stroke-width="1"/></g>
+        </g>
+        <g transform="rotate(288 100 100)">
+          <g class="sway"><use href="#petal" fill="url(#pg)"/><use href="#petal" fill="url(#lap)"/><g clip-path="url(#pclip)"><use href="#veins"/></g><use href="#petal" fill="none" stroke="var(--petal-in)" stroke-opacity=".34" stroke-width="1"/></g>
+        </g>
+      </g>
+
+      <!-- throat and staminal column -->
+      <circle cx="100" cy="100" r="17" fill="url(#throat)"/>
+      <g stroke="var(--vein)" stroke-opacity=".5" stroke-width="1.4" stroke-linecap="round" fill="none">
+        <path d="M100 100 100 64M100 100 134 77M100 100 66 77M100 100 121 136M100 100 79 136"/>
+      </g>
+      <g class="column">
+        <path d="M100 99C104 86 112 73 124 63" fill="none" stroke="var(--stamen)"
+              stroke-width="3.2" stroke-linecap="round"/>
+        <path d="M100 99C104 86 112 73 124 63" fill="none" stroke="#fff"
+              stroke-opacity=".38" stroke-width="1.1" stroke-linecap="round"/>
+        <g fill="var(--stamen)">
+          <circle cx="124" cy="63" r="3"/><circle cx="116" cy="69" r="2.2"/>
+          <circle cx="127" cy="70" r="2.2"/><circle cx="112" cy="77" r="1.9"/>
+          <circle cx="121" cy="77" r="1.8"/><circle cx="132" cy="65" r="1.8"/>
+          <circle cx="118" cy="83" r="1.5"/><circle cx="130" cy="76" r="1.5"/>
+        </g>
+        <g fill="var(--petal-core)">
+          <circle cx="129" cy="56" r="2.3"/><circle cx="121" cy="55" r="2"/>
+          <circle cx="134" cy="62" r="1.9"/><circle cx="126" cy="50" r="1.6"/>
+          <circle cx="114" cy="59" r="1.5"/><circle cx="136" cy="55" r="1.4"/>
+        </g>
+        <circle cx="100" cy="100" r="3" fill="var(--petal-core)"/>
+      </g>
+    </g>
+  </svg>
+</template>
+
+<!-- ===================== page ===================== -->
+<main class="page">
+
+  <div class="scene" id="scene" role="button" tabindex="0"
+       aria-expanded="false"
+       aria-label="Paper flower. Activate to unfold it into a letter.">
+    <div class="sheet" id="sheet">
+      <div class="core" data-letter></div>
+
+      <div class="flap f-nw">
+        <div class="face face-letter" data-letter></div>
+        <div class="face face-bloom" data-bloom></div>
+      </div>
+      <div class="flap f-ne">
+        <div class="face face-letter" data-letter></div>
+        <div class="face face-bloom" data-bloom></div>
+      </div>
+      <div class="flap f-se">
+        <div class="face face-letter" data-letter></div>
+        <div class="face face-bloom" data-bloom></div>
+      </div>
+      <div class="flap f-sw">
+        <div class="face face-letter" data-letter></div>
+        <div class="face face-bloom" data-bloom></div>
+      </div>
+
+      <div class="fringe f-nw" data-bloom></div>
+      <div class="fringe f-ne" data-bloom></div>
+      <div class="fringe f-se" data-bloom></div>
+      <div class="fringe f-sw" data-bloom></div>
+    </div>
+  </div>
+
+  <!-- the letter, once, for screen readers -->
+  <div class="sr-only">
+    <p class="sr-open"></p>
+    <p class="sr-body"></p>
+    <p class="sr-sign"></p>
+  </div>
+
+  <div class="blooms">
+    <button class="swatch" data-bloom-set="hibiscus" aria-pressed="true"  aria-label="Hibiscus"
+            style="background:conic-gradient(#ffd479,#f2872f,#e04a35,#ab1f4e,#ffd479)"></button>
+    <button class="swatch" data-bloom-set="poppy" aria-pressed="false" aria-label="Poppy"
+            style="background:conic-gradient(#ffc3a0,#ef4f2c,#cd2320,#3d1417,#ffc3a0)"></button>
+    <button class="swatch" data-bloom-set="cosmos" aria-pressed="false" aria-label="Cosmos"
+            style="background:conic-gradient(#fff2f7,#ef8fba,#d95291,#7e2159,#fff2f7)"></button>
+    <button class="swatch" data-bloom-set="magnolia" aria-pressed="false" aria-label="Magnolia"
+            style="background:conic-gradient(#fffbf0,#eccb92,#d79f61,#96592c,#fffbf0)"></button>
+  </div>
+
+</main>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ---------- clone artwork into every face ---------- */
+  const tplLetter = document.getElementById('tpl-letter').content;
+  const tplBloom  = document.getElementById('tpl-bloom').content;
+
+  /* The letter is painted onto all five panels of the sheet, so none of them
+     are exposed to assistive tech — the sr-only copy carries the text once. */
+  document.querySelectorAll('[data-letter]').forEach(host => {
+    host.appendChild(tplLetter.cloneNode(true));
+    host.setAttribute('aria-hidden', 'true');
+  });
+  document.querySelectorAll('[data-bloom]').forEach(host =>
+    host.appendChild(tplBloom.cloneNode(true)));
+
+  const root = document.documentElement;
+
+  /* ---------- letter text ---------- */
+  /* Payload keys map onto the panel classes, and every panel carries the same
+     copy — .lc-* is the painted text, .sr-* the one screen-reader copy. */
+  const TEXT_KEYS = { o: 'open', b: 'body', s: 'sign' };
+
+  function render(config) {
+    for (const [key, part] of Object.entries(TEXT_KEYS)) {
+      const text = config[key] ?? DEFAULTS[key];
+      document.querySelectorAll(`.lc-${part}, .sr-${part}`)
+        .forEach(el => { el.textContent = text; });
+    }
+    refit();                                // new copy rewraps: resize to the sheet
+  }
+
+  /* Size the handwriting to the sheet in both directions: a long letter is
+     shrunk until it clears the square, a short one is grown until it fills it.
+     Resizing the type also rewraps it, so height is not linear in font size —
+     binary-search the largest scale that still fits rather than stepping.
+     Measured on the centre panel; every copy carries the same text. */
+  const FIT_MIN = .38, FIT_MAX = 2.1;
+  const probeBox   = document.querySelector('.core .lc-text');
+  const probeInner = document.querySelector('.core .lc-inner');
+
+  function refit() {
+    if (!probeBox || !probeInner) return;
+    const fits = v => {
+      root.style.setProperty('--fit', v);
+      return probeInner.offsetHeight <= probeBox.clientHeight;
+    };
+    if (fits(FIT_MAX)) return;            // a few words: let them run large
+    let lo = FIT_MIN, hi = FIT_MAX;
+    for (let i = 0; i < 11; i++) {
+      const mid = (lo + hi) / 2;
+      if (fits(mid)) lo = mid; else hi = mid;
+    }
+    fits(lo);
+  }
+
+  let fitPending = 0;
+  const queueRefit = () => {
+    cancelAnimationFrame(fitPending);
+    fitPending = requestAnimationFrame(refit);
+  };
+
+  render(DEFAULTS);
+
+  /* ---------- the fold ---------- */
+  const scene = document.getElementById('scene');
+  const sheet = document.getElementById('sheet');
+
+  function setOpen(open) {
+    sheet.classList.toggle('open', open);
+    scene.setAttribute('aria-expanded', String(open));
+    scene.setAttribute('aria-label', open
+      ? 'Open letter. Activate to fold it back into a flower.'
+      : 'Paper flower. Activate to unfold it into a letter.');
+  }
+
+  scene.addEventListener('click', () => setOpen(!sheet.classList.contains('open')));
+  scene.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setOpen(!sheet.classList.contains('open'));
+    }
+  });
+
+  /* ---------- blooms ---------- */
+  const BLOOMS = {
+    hibiscus: { '--petal-rim':'#ffd479','--petal-tip':'#fdb63f','--petal-mid':'#f2872f',
+                '--petal-in':'#e04a35','--petal-core':'#ab1f4e','--vein':'#c2384c',
+                '--stamen':'#f6c445','--leaf':'#55794a','--leaf-2':'#375b35' },
+    poppy:    { '--petal-rim':'#ffc3a0','--petal-tip':'#fb8a5c','--petal-mid':'#ef4f2c',
+                '--petal-in':'#cd2320','--petal-core':'#3d1417','--vein':'#8d1a1a',
+                '--stamen':'#2b1113','--leaf':'#63784b','--leaf-2':'#44562f' },
+    cosmos:   { '--petal-rim':'#fff2f7','--petal-tip':'#fbcadd','--petal-mid':'#ef8fba',
+                '--petal-in':'#d95291','--petal-core':'#7e2159','--vein':'#b03d78',
+                '--stamen':'#f7d154','--leaf':'#6d8a5a','--leaf-2':'#4e6b3f' },
+    magnolia: { '--petal-rim':'#fffbf0','--petal-tip':'#f7e6c2','--petal-mid':'#eccb92',
+                '--petal-in':'#d79f61','--petal-core':'#96592c','--vein':'#b8813f',
+                '--stamen':'#c9962f','--leaf':'#6b7d4e','--leaf-2':'#4d5c37' }
+  };
+  /* An unknown name falls back to the default bloom rather than throwing, so a
+     link written against a later schema still opens. */
+  function applyBloom(name) {
+    const bloom = name in BLOOMS ? name : DEFAULTS.f;
+    for (const [k, v] of Object.entries(BLOOMS[bloom]))
+      root.style.setProperty(k, v);
+    document.querySelectorAll('[data-bloom-set]').forEach(b =>
+      b.setAttribute('aria-pressed', String(b.dataset.bloomSet === bloom)));
+  }
+
+  document.querySelectorAll('[data-bloom-set]').forEach(btn => {
+    btn.addEventListener('click', () => applyBloom(btn.dataset.bloomSet));
+  });
+
+  /* the square changes size with the viewport, and Caveat lands late */
+  addEventListener('resize', queueRefit);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(refit);
+})();
+</script>
+</body>
+</html>
