@@ -212,12 +212,6 @@ body{
   0%,100%{ transform:rotate(calc(var(--amp) * -1)); }
   50%    { transform:rotate(var(--amp)); }
 }
-.petals > g:nth-child(1) .sway{ --amp:1.5deg; --dur:3.2s; --ph:0s; }
-.petals > g:nth-child(2) .sway{ --amp:1.1deg; --dur:2.7s; --ph:-.9s; }
-.petals > g:nth-child(3) .sway{ --amp:1.7deg; --dur:3.7s; --ph:-1.7s; }
-.petals > g:nth-child(4) .sway{ --amp:1.3deg; --dur:2.9s; --ph:-.4s; }
-.petals > g:nth-child(5) .sway{ --amp:1.6deg; --dur:3.4s; --ph:-2.2s; }
-
 /* ---------- letter face ---------- */
 .lc{
   position:absolute; inset:0;
@@ -349,25 +343,47 @@ body.compose-open{ overflow:hidden; }
 .compose-create:focus-visible, .compose-copy:focus-visible, .compose-back:focus-visible{
   outline:2px solid #2b231c; outline-offset:3px;
 }
+.compose-create:disabled{
+  opacity:.4; cursor:not-allowed;
+}
+.compose-create:disabled:hover{ opacity:.4; }
 
 .compose-link-actions{ display:flex; align-items:center; gap:.9rem; flex-wrap:wrap; margin:.6rem 0; }
 .compose-preview-link{ color:#7a5a36; font-size:.9rem; }
 .compose-preview-link:focus-visible{ outline:2px solid #2b231c; outline-offset:2px; }
 .compose-copy-status{ font-size:.85rem; color:#5b7a4d; }
 
+/* .scene is a fixed --stage x --stage square that's meant to be shrunk to
+   fit this box. A flex/grid container won't do that cleanly: .scene has
+   overflow:clip, which zeroes its automatic min-width for shrink purposes
+   on the main axis only, so a flex parent shrinks its width but not its
+   height, warping the square before the scale is even applied. Taking
+   .scene out of flow with absolute positioning sidesteps that entirely —
+   both axes stay exactly --stage, and translate(-50%,-50%) plus scale()
+   centers the now-uniformly-shrunk square in the box. */
 .compose-preview-wrap{
+  position:relative;
   width:calc(var(--stage) * .58); height:calc(var(--stage) * .58);
   margin:0 auto; overflow:hidden;
-  display:flex; align-items:center; justify-content:center;
 }
-.compose-preview-wrap .scene{ transform:scale(.58); }
+.compose-preview-wrap .scene{
+  position:absolute; top:50%; left:50%;
+  transform:translate(-50%,-50%) scale(.58);
+}
 
 @media (max-width:719px){
   .compose-grid{ grid-template-columns:1fr; }
   .compose-right{ order:-1; margin-bottom:.5rem; }
   .compose-preview-wrap{ width:calc(var(--stage) * .46); height:calc(var(--stage) * .46); }
-  .compose-preview-wrap .scene{ transform:scale(.46); }
+  .compose-preview-wrap .scene{ transform:translate(-50%,-50%) scale(.46); }
 }
+
+/* ============================================================
+   Phase 5 addition — appended only.
+   9 flowers now share the swatch row; let it wrap onto two rows
+   instead of overflowing the compose panel.
+   ============================================================ */
+.blooms{ flex-wrap:wrap; }
 </style>
 </head>
 <body>
@@ -398,126 +414,6 @@ body.compose-open{ overflow:hidden; }
       </div>
     </div>
   </div>
-</template>
-
-<template id="tpl-bloom">
-  <svg class="art" viewBox="0 0 200 200" aria-hidden="true">
-    <defs>
-      <!-- one radial ramp centred on the flower, so every rotated petal
-           reads the same gradient: gold at the rim, crimson in the throat -->
-      <radialGradient id="pg" gradientUnits="userSpaceOnUse" cx="100" cy="100" r="88">
-        <stop offset="0%"   stop-color="var(--petal-core)"/>
-        <stop offset="8%"   stop-color="var(--petal-core)"/>
-        <stop offset="20%"  stop-color="var(--petal-in)"/>
-        <stop offset="60%"  stop-color="var(--petal-mid)"/>
-        <stop offset="88%"  stop-color="var(--petal-tip)"/>
-        <stop offset="100%" stop-color="var(--petal-rim)"/>
-      </radialGradient>
-      <radialGradient id="throat" gradientUnits="userSpaceOnUse" cx="100" cy="100" r="17">
-        <stop offset="0%"   stop-color="var(--petal-core)"/>
-        <stop offset="62%"  stop-color="var(--petal-core)" stop-opacity=".55"/>
-        <stop offset="100%" stop-color="var(--petal-core)" stop-opacity="0"/>
-      </radialGradient>
-
-      <!-- broad hibiscus petal: ruffled outer edge, notched at the tip -->
-      <path id="petal" d="M100 100C84 89 60 85 55 59 50 36 52 16 62 13 70 11 74 16 78 20 82 13 85 12 88 14 93 17 97 21 100 27 103 21 107 17 112 14 115 12 118 13 122 20 126 16 130 11 138 13 148 16 150 36 145 59 140 85 116 89 100 100Z"/>
-      <!-- keeps each petal's pencil strokes inside its own outline -->
-      <clipPath id="pclip"><use href="#petal"/></clipPath>
-
-      <!-- coloured-pencil strokes fanning out of the throat -->
-      <g id="veins" fill="none" stroke="var(--vein)" stroke-linecap="round">
-        <g stroke-opacity=".52" stroke-width="1.1">
-          <path d="M100 100C99 76 100 46 100 16"/>
-          <path d="M100 100C95 77 84 50 72 24"/>
-          <path d="M100 100C105 77 116 50 128 24"/>
-        </g>
-        <g stroke-opacity=".34" stroke-width=".8">
-          <path d="M100 100C97 78 92 50 86 18"/>
-          <path d="M100 100C103 78 108 50 114 18"/>
-          <path d="M100 100C92 79 76 56 60 36"/>
-          <path d="M100 100C108 79 124 56 140 36"/>
-          <path d="M100 100C90 82 70 66 52 54"/>
-          <path d="M100 100C110 82 130 66 148 54"/>
-        </g>
-        <g stroke-opacity=".2" stroke-width=".6">
-          <path d="M100 100C98 77 96 48 94 17"/>
-          <path d="M100 100C102 77 104 48 106 17"/>
-          <path d="M100 100C94 78 80 53 66 30"/>
-          <path d="M100 100C106 78 120 53 134 30"/>
-          <path d="M100 100C91 81 73 61 56 45"/>
-          <path d="M100 100C109 81 127 61 144 45"/>
-        </g>
-      </g>
-
-      <!-- soft shadow where the next petal laps over this one -->
-      <linearGradient id="lap" gradientUnits="userSpaceOnUse" x1="56" y1="52" x2="96" y2="82">
-        <stop offset="0%"   stop-color="var(--petal-core)" stop-opacity=".15"/>
-        <stop offset="100%" stop-color="var(--petal-core)" stop-opacity="0"/>
-      </linearGradient>
-
-      <!-- drawn pointing straight down; the copies below swing it out to the
-           diagonals, the only directions with room past the bloom -->
-      <g id="oneleaf">
-        <path d="M100 104C119 125 127 160 100 204 73 160 81 125 100 104Z" fill="var(--leaf)"/>
-        <path d="M100 112 100 198" fill="none" stroke="var(--leaf-2)" stroke-opacity=".55" stroke-width="1.2"/>
-        <g fill="none" stroke="var(--leaf-2)" stroke-opacity=".3" stroke-width=".75">
-          <path d="M100 132 113 126M100 132 87 126M100 152 118 145M100 152 82 145M100 172 113 166M100 172 87 166"/>
-        </g>
-      </g>
-    </defs>
-
-    <!-- Scaled past the sheet so the bloom overhangs the folded paper on
-         every side — no corner of the letter shows. Set slightly
-         off-square, like a hand drew it. -->
-    <g transform="translate(100 100) rotate(-13) scale(1.4) translate(-100 -100)">
-      <g class="leaves">
-        <use href="#oneleaf" transform="rotate(58 100 100)" opacity=".92"/>
-        <use href="#oneleaf" transform="rotate(-32 100 100)"/>
-      </g>
-
-      <g class="petals">
-        <g transform="rotate(0 100 100)">
-          <g class="sway"><use href="#petal" fill="url(#pg)"/><use href="#petal" fill="url(#lap)"/><g clip-path="url(#pclip)"><use href="#veins"/></g><use href="#petal" fill="none" stroke="var(--petal-in)" stroke-opacity=".34" stroke-width="1"/></g>
-        </g>
-        <g transform="rotate(72 100 100)">
-          <g class="sway"><use href="#petal" fill="url(#pg)"/><use href="#petal" fill="url(#lap)"/><g clip-path="url(#pclip)"><use href="#veins"/></g><use href="#petal" fill="none" stroke="var(--petal-in)" stroke-opacity=".34" stroke-width="1"/></g>
-        </g>
-        <g transform="rotate(144 100 100)">
-          <g class="sway"><use href="#petal" fill="url(#pg)"/><use href="#petal" fill="url(#lap)"/><g clip-path="url(#pclip)"><use href="#veins"/></g><use href="#petal" fill="none" stroke="var(--petal-in)" stroke-opacity=".34" stroke-width="1"/></g>
-        </g>
-        <g transform="rotate(216 100 100)">
-          <g class="sway"><use href="#petal" fill="url(#pg)"/><use href="#petal" fill="url(#lap)"/><g clip-path="url(#pclip)"><use href="#veins"/></g><use href="#petal" fill="none" stroke="var(--petal-in)" stroke-opacity=".34" stroke-width="1"/></g>
-        </g>
-        <g transform="rotate(288 100 100)">
-          <g class="sway"><use href="#petal" fill="url(#pg)"/><use href="#petal" fill="url(#lap)"/><g clip-path="url(#pclip)"><use href="#veins"/></g><use href="#petal" fill="none" stroke="var(--petal-in)" stroke-opacity=".34" stroke-width="1"/></g>
-        </g>
-      </g>
-
-      <!-- throat and staminal column -->
-      <circle cx="100" cy="100" r="17" fill="url(#throat)"/>
-      <g stroke="var(--vein)" stroke-opacity=".5" stroke-width="1.4" stroke-linecap="round" fill="none">
-        <path d="M100 100 100 64M100 100 134 77M100 100 66 77M100 100 121 136M100 100 79 136"/>
-      </g>
-      <g class="column">
-        <path d="M100 99C104 86 112 73 124 63" fill="none" stroke="var(--stamen)"
-              stroke-width="3.2" stroke-linecap="round"/>
-        <path d="M100 99C104 86 112 73 124 63" fill="none" stroke="#fff"
-              stroke-opacity=".38" stroke-width="1.1" stroke-linecap="round"/>
-        <g fill="var(--stamen)">
-          <circle cx="124" cy="63" r="3"/><circle cx="116" cy="69" r="2.2"/>
-          <circle cx="127" cy="70" r="2.2"/><circle cx="112" cy="77" r="1.9"/>
-          <circle cx="121" cy="77" r="1.8"/><circle cx="132" cy="65" r="1.8"/>
-          <circle cx="118" cy="83" r="1.5"/><circle cx="130" cy="76" r="1.5"/>
-        </g>
-        <g fill="var(--petal-core)">
-          <circle cx="129" cy="56" r="2.3"/><circle cx="121" cy="55" r="2"/>
-          <circle cx="134" cy="62" r="1.9"/><circle cx="126" cy="50" r="1.6"/>
-          <circle cx="114" cy="59" r="1.5"/><circle cx="136" cy="55" r="1.4"/>
-        </g>
-        <circle cx="100" cy="100" r="3" fill="var(--petal-core)"/>
-      </g>
-    </g>
-  </svg>
 </template>
 
 <!-- ===================== page ===================== -->
@@ -580,7 +476,7 @@ body.compose-open{ overflow:hidden; }
               <label for="fieldOpen">Opening</label>
               <span class="compose-count" id="countOpen">0 / 40</span>
             </div>
-            <input type="text" id="fieldOpen" maxlength="40" placeholder="hi,">
+            <input type="text" id="fieldOpen" maxlength="40" placeholder="hi," required aria-required="true">
           </div>
 
           <div class="compose-field">
@@ -588,7 +484,7 @@ body.compose-open{ overflow:hidden; }
               <label for="fieldBody">Body</label>
               <span class="compose-count" id="countBody">0 / 500</span>
             </div>
-            <textarea id="fieldBody" rows="6" maxlength="500"></textarea>
+            <textarea id="fieldBody" rows="6" maxlength="500" required aria-required="true"></textarea>
           </div>
 
           <div class="compose-field">
@@ -596,24 +492,15 @@ body.compose-open{ overflow:hidden; }
               <label for="fieldSign">Signature</label>
               <span class="compose-count" id="countSign">0 / 40</span>
             </div>
-            <input type="text" id="fieldSign" maxlength="40" placeholder="always,">
+            <input type="text" id="fieldSign" maxlength="40" placeholder="always," required aria-required="true">
           </div>
 
           <div class="compose-field">
             <div class="compose-field-head"><span>Flower</span></div>
-            <div class="blooms" id="composeBlooms">
-              <button class="swatch" data-bloom-set="hibiscus" aria-pressed="true"  aria-label="Hibiscus"
-                      style="background:conic-gradient(#ffd479,#f2872f,#e04a35,#ab1f4e,#ffd479)"></button>
-              <button class="swatch" data-bloom-set="poppy" aria-pressed="false" aria-label="Poppy"
-                      style="background:conic-gradient(#ffc3a0,#ef4f2c,#cd2320,#3d1417,#ffc3a0)"></button>
-              <button class="swatch" data-bloom-set="cosmos" aria-pressed="false" aria-label="Cosmos"
-                      style="background:conic-gradient(#fff2f7,#ef8fba,#d95291,#7e2159,#fff2f7)"></button>
-              <button class="swatch" data-bloom-set="magnolia" aria-pressed="false" aria-label="Magnolia"
-                      style="background:conic-gradient(#fffbf0,#eccb92,#d79f61,#96592c,#fffbf0)"></button>
-            </div>
+            <div class="blooms" id="composeBlooms"></div>
           </div>
 
-          <button class="compose-create" id="composeCreateBtn" type="button">Create link</button>
+          <button class="compose-create" id="composeCreateBtn" type="button" disabled>Create link</button>
         </div>
 
         <div class="compose-link" id="composeLinkView" hidden>
@@ -670,12 +557,259 @@ body.compose-open{ overflow:hidden; }
 </div>
 
 <script>
+/* ============================================================
+   Bloom library — flower definitions + renderer.
+   Builds one bloom SVG from a config object. Inlined from bloom-lib.js.
+   ============================================================ */
+
+const PETALS = {
+  hibiscus: { reach: 87.5, d: 'M100 100C84 89 60 85 55 59 50 36 52 16 62 13 70 11 74 16 78 20 82 13 85 12 88 14 93 17 97 21 100 27 103 21 107 17 112 14 115 12 118 13 122 20 126 16 130 11 138 13 148 16 150 36 145 59 140 85 116 89 100 100Z' },
+  sakura:   { reach: 81,   d: 'M100 100C88 88 70 76 64 58 58 40 66 24 80 21 90 19 96 26 100 34 104 26 110 19 120 21 134 24 142 40 136 58 130 76 112 88 100 100Z' },
+  plumeria: { reach: 86,   d: 'M100 100C83 88 60 78 57 55 54 32 71 14 100 14 129 14 146 32 143 55 140 78 117 88 100 100Z' },
+  ray:      { reach: 86,   d: 'M100 100C93 85 83 62 85 38 86 23 92 13 97 13 98 17 99 19 100 21 101 19 102 17 103 13 108 13 114 23 115 38 117 62 107 85 100 100Z' },
+  lotus:    { reach: 92,   d: 'M100 100C88 84 76 60 78 38 79 24 88 12 100 8 112 12 121 24 122 38 124 60 112 84 100 100Z' },
+  ruffle:   { reach: 81,   d: 'M100 100C88 90 70 80 66 60 62 42 70 26 82 22 90 19 95 25 100 32 105 25 110 19 118 22 130 26 138 42 134 60 130 80 112 90 100 100Z' }
+};
+
+/* The original four palettes, preserved verbatim.
+   `vars` bypasses the derived ramp so letters shared before this change
+   render byte-identical to how their sender saw them. */
+const LEGACY_VARS = {
+  hibiscus: { '--petal-rim':'#ffd479','--petal-tip':'#fdb63f','--petal-mid':'#f2872f','--petal-in':'#e04a35',
+              '--petal-core':'#ab1f4e','--petal-edge':'#e04a35','--vein':'#c2384c','--stamen':'#f6c445',
+              '--leaf':'#55794a','--leaf-2':'#375b35' },
+  poppy:    { '--petal-rim':'#ffc3a0','--petal-tip':'#fb8a5c','--petal-mid':'#ef4f2c','--petal-in':'#cd2320',
+              '--petal-core':'#3d1417','--petal-edge':'#cd2320','--vein':'#8d1a1a','--stamen':'#2b1113',
+              '--leaf':'#63784b','--leaf-2':'#44562f' },
+  cosmos:   { '--petal-rim':'#fff2f7','--petal-tip':'#fbcadd','--petal-mid':'#ef8fba','--petal-in':'#d95291',
+              '--petal-core':'#7e2159','--petal-edge':'#d95291','--vein':'#b03d78','--stamen':'#f7d154',
+              '--leaf':'#6d8a5a','--leaf-2':'#4e6b3f' },
+  magnolia: { '--petal-rim':'#fffbf0','--petal-tip':'#f7e6c2','--petal-mid':'#eccb92','--petal-in':'#d79f61',
+              '--petal-core':'#96592c','--petal-edge':'#d79f61','--vein':'#b8813f','--stamen':'#c9962f',
+              '--leaf':'#6b7d4e','--leaf-2':'#4d5c37' }
+};
+
+/* Each ring: [petalCount, ringScale, rotationOffsetDegrees] */
+const FLOWERS = {
+  /* --- the original four: same shape, original palettes, unchanged --- */
+  hibiscus: {
+    label: 'Hibiscus', petal: 'hibiscus', rings: [[5, 1, 0]],
+    centre: 'column', scale: 1.40, tilt: -13, leaves: [58, -32],
+    vars: LEGACY_VARS.hibiscus, swatch: ['#ffd479', '#ab1f4e']
+  },
+  /*poppy: {
+    label: 'Poppy', petal: 'hibiscus', rings: [[5, 1, 0]],
+    centre: 'column', scale: 1.40, tilt: -13, leaves: [58, -32],
+    vars: LEGACY_VARS.poppy, swatch: ['#fb8a5c', '#3d1417']
+  },
+  cosmos: {
+    label: 'Cosmos', petal: 'hibiscus', rings: [[5, 1, 0]],
+    centre: 'column', scale: 1.40, tilt: -13, leaves: [58, -32],
+    vars: LEGACY_VARS.cosmos, swatch: ['#fbcadd', '#7e2159']
+  },
+  magnolia: {
+    label: 'Magnolia', petal: 'hibiscus', rings: [[5, 1, 0]],
+    centre: 'column', scale: 1.40, tilt: -13, leaves: [58, -32],
+    vars: LEGACY_VARS.magnolia, swatch: ['#f7e6c2', '#96592c']
+  },
+*/
+  /* --- new species --- */
+  sakura: {
+    label: 'Cherry blossom', petal: 'sakura', rings: [[5, 1, 0]],
+    centre: 'stamens', scale: 1.52, tilt: 8, leaves: [],
+    tip: '#fff4f8', core: '#d9578c', leaf: '#6b8a5a', ramp: [0, 6, 16, 46, 84], swatch: ['#fbd0e0', '#d9578c']
+  },
+  plumeria: {
+    label: 'Frangipani', petal: 'plumeria', rings: [[5, 1, 0]],
+    centre: 'throat', scale: 1.44, tilt: -20, leaves: [52, -40],
+    tip: '#fffaef', core: '#ee9f10', leaf: '#3f6b46', stamen: '#f7c948', ramp: [0, 5, 13, 34, 72], swatch: ['#fffaef', '#ee9f10']
+  },
+  daisy: {
+    label: 'Daisy', petal: 'ray', rings: [[13, 1, 0]],
+    centre: 'disc', scale: 1.46, tilt: -6, leaves: [64, -28],
+    tip: '#ffffff', core: '#e8991f', leaf: '#6d8a5a', stamen: '#fbe7a8', ramp: [0, 4, 10, 24, 52], swatch: ['#ffffff', '#e8991f']
+  },
+  lotus: {
+    label: 'Lotus', petal: 'lotus', rings: [[8, 1, 0], [8, 0.68, 22.5]],
+    centre: 'pod', scale: 1.36, tilt: 0, leaves: [],
+    tip: '#fff2f6', core: '#d4477a', leaf: '#4f7d5c', stamen: '#e8d9a8', swatch: ['#fbd7e6', '#d4477a']
+  },
+  marigold: {
+    label: 'Marigold', petal: 'ruffle', rings: [[11, 1, 0], [9, 0.72, 16], [7, 0.46, 30]],
+    centre: 'dense', scale: 1.52, tilt: -9, leaves: [60, -34],
+    tip: '#ffc23d', core: '#a82c14', leaf: '#5d7440', swatch: ['#ffc23d', '#a82c14']
+  }
+};
+
+/* deterministic per-petal sway timing — index-keyed so the flap copy and the
+   fringe copy of petal i always stay locked together */
+const swayVars = i =>
+  `--amp:${(1.1 + ((i * 37) % 70) / 100).toFixed(2)}deg;` +
+  `--dur:${(2.7 + ((i * 53) % 110) / 100).toFixed(2)}s;` +
+  `--ph:-${(((i * 61) % 240) / 100).toFixed(2)}s;`;
+
+/* radius of the throat-gradient-filled circle each centre style draws, so the
+   shared gradient fades out exactly at that circle's edge instead of getting
+   cut off mid-ramp (which reads as a hard ring instead of a soft glow) */
+const THROAT_R = { column: 17, stamens: 13, throat: 26, disc: 25, pod: 16 };
+
+const CENTRES = {
+  column: u => `
+    <circle cx="100" cy="100" r="17" fill="url(#throat${u})"/>
+    <g stroke="var(--vein)" stroke-opacity=".5" stroke-width="1.4" stroke-linecap="round" fill="none">
+      <path d="M100 100 100 64M100 100 134 77M100 100 66 77M100 100 121 136M100 100 79 136"/>
+    </g>
+    <path d="M100 99C104 86 112 73 124 63" fill="none" stroke="var(--stamen)" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M100 99C104 86 112 73 124 63" fill="none" stroke="#fff" stroke-opacity=".38" stroke-width="1.1" stroke-linecap="round"/>
+    <g fill="var(--stamen)">
+      <circle cx="124" cy="63" r="3"/><circle cx="116" cy="69" r="2.2"/><circle cx="127" cy="70" r="2.2"/>
+      <circle cx="112" cy="77" r="1.9"/><circle cx="121" cy="77" r="1.8"/><circle cx="132" cy="65" r="1.8"/>
+      <circle cx="118" cy="83" r="1.5"/><circle cx="130" cy="76" r="1.5"/>
+    </g>
+    <g fill="var(--petal-core)">
+      <circle cx="129" cy="56" r="2.3"/><circle cx="121" cy="55" r="2"/><circle cx="134" cy="62" r="1.9"/>
+      <circle cx="126" cy="50" r="1.6"/><circle cx="114" cy="59" r="1.5"/><circle cx="136" cy="55" r="1.4"/>
+    </g>
+    <circle cx="100" cy="100" r="3" fill="var(--petal-core)"/>`,
+
+  stamens: u => `
+    <circle cx="100" cy="100" r="13" fill="url(#throat${u})"/>
+    <g stroke="var(--stamen)" stroke-width="1.3" stroke-linecap="round" fill="none">
+      ${Array.from({ length: 14 }, (_, i) => {
+        const a = (i * 360 / 14 - 90) * Math.PI / 180, r = 20 + (i % 3) * 6;
+        return `<path d="M100 100 ${(100 + Math.cos(a) * r).toFixed(1)} ${(100 + Math.sin(a) * r).toFixed(1)}"/>`;
+      }).join('')}
+    </g>
+    <g fill="var(--stamen)">
+      ${Array.from({ length: 14 }, (_, i) => {
+        const a = (i * 360 / 14 - 90) * Math.PI / 180, r = 20 + (i % 3) * 6;
+        return `<circle cx="${(100 + Math.cos(a) * r).toFixed(1)}" cy="${(100 + Math.sin(a) * r).toFixed(1)}" r="2.1"/>`;
+      }).join('')}
+    </g>
+    <circle cx="100" cy="100" r="4.5" fill="var(--petal-core)" opacity=".8"/>`,
+
+  throat: u => `
+    <circle cx="100" cy="100" r="26" fill="url(#throat${u})"/>
+    <circle cx="100" cy="100" r="9" fill="var(--stamen)" opacity=".5"/>`,
+
+  disc: u => `
+    <circle cx="100" cy="100" r="25" fill="var(--petal-core)"/>
+    <circle cx="100" cy="100" r="25" fill="url(#throat${u})" opacity=".5"/>
+    <g fill="var(--stamen)" opacity=".75">
+      ${Array.from({ length: 44 }, (_, i) => {
+        const a = i * 2.399963, r = 3.1 * Math.sqrt(i);
+        return r > 22 ? '' : `<circle cx="${(100 + Math.cos(a) * r).toFixed(1)}" cy="${(100 + Math.sin(a) * r).toFixed(1)}" r="1.5"/>`;
+      }).join('')}
+    </g>`,
+
+  pod: u => `
+    <circle cx="100" cy="100" r="16" fill="var(--stamen)" opacity=".9"/>
+    <circle cx="100" cy="100" r="16" fill="url(#throat${u})" opacity=".35"/>
+    <g fill="var(--leaf-2)" opacity=".65">
+      ${Array.from({ length: 9 }, (_, i) => {
+        const a = i * 2.399963, r = 3.6 * Math.sqrt(i);
+        return `<circle cx="${(100 + Math.cos(a) * r).toFixed(1)}" cy="${(100 + Math.sin(a) * r).toFixed(1)}" r="2.3"/>`;
+      }).join('')}
+    </g>`,
+
+  dense: u => `<circle cx="100" cy="100" r="9" fill="var(--petal-core)" opacity=".55"/>`
+};
+
+const LEAF = `
+  <path d="M100 104C119 125 127 160 100 204 73 160 81 125 100 104Z" fill="var(--leaf)"/>
+  <path d="M100 112 100 198" fill="none" stroke="var(--leaf-2)" stroke-opacity=".55" stroke-width="1.2"/>
+  <g fill="none" stroke="var(--leaf-2)" stroke-opacity=".3" stroke-width=".75">
+    <path d="M100 132 113 126M100 132 87 126M100 152 118 145M100 152 82 145M100 172 113 166M100 172 87 166"/>
+  </g>`;
+
+/** Build one bloom SVG. `u` must be unique per instance on the page. */
+function renderBloomSVG(f, u) {
+  const petal = PETALS[f.petal];
+  const r = f.ramp || [0, 8, 20, 60, 88];
+  let i = 0;
+  const rings = f.rings.map(([n, rs, off]) => {
+    const petals = Array.from({ length: n }, (_, k) => {
+      const a = off + k * 360 / n;
+      return `<g transform="rotate(${a.toFixed(2)} 100 100)"><g class="sway" style="${swayVars(i++)}">
+        <use href="#petal${u}" fill="url(#pg${u})"/>
+        <use href="#petal${u}" fill="url(#lap${u})"/>
+        <g clip-path="url(#pclip${u})"><use href="#veins${u}"/></g>
+        <use href="#petal${u}" fill="none" stroke="var(--petal-edge)" stroke-opacity=".34" stroke-width="1"/>
+      </g></g>`;
+    }).join('');
+    return `<g transform="translate(100 100) scale(${rs}) translate(-100 -100)">${petals}</g>`;
+  }).join('');
+
+  return `<svg class="art" viewBox="0 0 200 200" aria-hidden="true">
+  <defs>
+    <radialGradient id="pg${u}" gradientUnits="userSpaceOnUse" cx="100" cy="100" r="88">
+      <stop offset="${r[0]}%" stop-color="var(--petal-core)"/><stop offset="${r[1]}%" stop-color="var(--petal-core)"/>
+      <stop offset="${r[2]}%" stop-color="var(--petal-in)"/><stop offset="${r[3]}%" stop-color="var(--petal-mid)"/>
+      <stop offset="${r[4]}%" stop-color="var(--petal-tip)"/><stop offset="100%" stop-color="var(--petal-rim)"/>
+    </radialGradient>
+    <linearGradient id="lap${u}" gradientUnits="userSpaceOnUse" x1="56" y1="52" x2="96" y2="82">
+      <stop offset="0%" stop-color="var(--petal-core)" stop-opacity=".15"/>
+      <stop offset="100%" stop-color="var(--petal-core)" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="throat${u}" gradientUnits="userSpaceOnUse" cx="100" cy="100" r="${THROAT_R[f.centre] ?? 26}">
+      <stop offset="0%" stop-color="var(--petal-core)"/>
+      <stop offset="62%" stop-color="var(--petal-core)" stop-opacity=".55"/>
+      <stop offset="100%" stop-color="var(--petal-core)" stop-opacity="0"/>
+    </radialGradient>
+    <path id="petal${u}" d="${petal.d}"/>
+    <clipPath id="pclip${u}"><use href="#petal${u}"/></clipPath>
+    <g id="veins${u}" fill="none" stroke="var(--vein)" stroke-linecap="round">
+      <g stroke-opacity=".52" stroke-width="1.1">
+        <path d="M100 100C99 76 100 46 100 16"/><path d="M100 100C95 77 84 50 72 24"/><path d="M100 100C105 77 116 50 128 24"/>
+      </g>
+      <g stroke-opacity=".34" stroke-width=".8">
+        <path d="M100 100C97 78 92 50 86 18"/><path d="M100 100C103 78 108 50 114 18"/>
+        <path d="M100 100C92 79 76 56 60 36"/><path d="M100 100C108 79 124 56 140 36"/>
+        <path d="M100 100C90 82 70 66 52 54"/><path d="M100 100C110 82 130 66 148 54"/>
+      </g>
+      <g stroke-opacity=".2" stroke-width=".6">
+        <path d="M100 100C98 77 96 48 94 17"/><path d="M100 100C102 77 104 48 106 17"/>
+        <path d="M100 100C94 78 80 53 66 30"/><path d="M100 100C106 78 120 53 134 30"/>
+        <path d="M100 100C91 81 73 61 56 45"/><path d="M100 100C109 81 127 61 144 45"/>
+      </g>
+    </g>
+    <g id="leaf${u}">${LEAF}</g>
+  </defs>
+
+  <!-- backing polygon: the folded paper diamond, filled with the petal ramp,
+       so any gap between petals reads as flower rather than paper -->
+  <polygon points="100,0 200,100 100,200 0,100" fill="url(#pg${u})"/>
+
+  <g transform="translate(100 100) rotate(${f.tilt}) scale(${f.scale}) translate(-100 -100)">
+    <g class="leaves">${f.leaves.map((a, k) => `<use href="#leaf${u}" transform="rotate(${a} 100 100)" opacity="${k ? 1 : .92}"/>`).join('')}</g>
+    <g class="petals">${rings}</g>
+    ${CENTRES[f.centre](u)}
+  </g>
+</svg>`;
+}
+
+/** Derive the 9 CSS variables from a flower's 3 anchor colours. */
+function bloomVars(f) {
+  if (f.vars) return f.vars;
+  return {
+    '--petal-rim':  `color-mix(in oklch, ${f.tip} 80%, white)`,
+    '--petal-tip':  f.tip,
+    '--petal-mid':  `color-mix(in oklch, ${f.tip} 62%, ${f.core})`,
+    '--petal-in':   `color-mix(in oklch, ${f.tip} 30%, ${f.core})`,
+    '--petal-core': f.core,
+    '--vein':       `color-mix(in oklch, ${f.core} 74%, ${f.tip})`,
+    '--petal-edge': `color-mix(in oklch, ${f.core} 40%, ${f.tip})`,
+    '--stamen':     f.stamen || `color-mix(in oklch, ${f.tip} 62%, #f6c445)`,
+    '--leaf':       f.leaf,
+    '--leaf-2':     `color-mix(in oklch, ${f.leaf} 68%, black)`
+  };
+}
+
 (() => {
   'use strict';
 
   /* ---------- clone artwork into every face ---------- */
   const tplLetter = document.getElementById('tpl-letter').content;
-  const tplBloom  = document.getElementById('tpl-bloom').content;
 
   /* The letter is painted onto all five panels of the sheet, so none of them
      are exposed to assistive tech — the sr-only copy carries the text once. */
@@ -683,8 +817,6 @@ body.compose-open{ overflow:hidden; }
     host.appendChild(tplLetter.cloneNode(true));
     host.setAttribute('aria-hidden', 'true');
   });
-  document.querySelectorAll('[data-bloom]').forEach(host =>
-    host.appendChild(tplBloom.cloneNode(true)));
 
   const root = document.documentElement;
 
@@ -767,7 +899,7 @@ body.compose-open{ overflow:hidden; }
   }
 
   // Always returns a valid, safe config; never throws. `f` is checked
-  // against BLOOMS below, once that table exists.
+  // against FLOWERS below, once that table exists.
   function sanitize(raw) {
     const src = raw && typeof raw === 'object' ? raw : {};
     const clamp = (v, fallback, max) => (typeof v === 'string' ? v : fallback).slice(0, max);
@@ -776,7 +908,7 @@ body.compose-open{ overflow:hidden; }
       o: clamp(src.o, DEFAULTS.o, 40),
       b: clamp(src.b, DEFAULTS.b, 500),
       s: clamp(src.s, DEFAULTS.s, 40),
-      f: typeof src.f === 'string' && src.f in BLOOMS ? src.f : DEFAULTS.f
+      f: typeof src.f === 'string' && src.f in FLOWERS ? src.f : DEFAULTS.f
     };
   }
 
@@ -801,28 +933,30 @@ body.compose-open{ overflow:hidden; }
   });
 
   /* ---------- blooms ---------- */
-  const BLOOMS = {
-    hibiscus: { '--petal-rim':'#ffd479','--petal-tip':'#fdb63f','--petal-mid':'#f2872f',
-                '--petal-in':'#e04a35','--petal-core':'#ab1f4e','--vein':'#c2384c',
-                '--stamen':'#f6c445','--leaf':'#55794a','--leaf-2':'#375b35' },
-    poppy:    { '--petal-rim':'#ffc3a0','--petal-tip':'#fb8a5c','--petal-mid':'#ef4f2c',
-                '--petal-in':'#cd2320','--petal-core':'#3d1417','--vein':'#8d1a1a',
-                '--stamen':'#2b1113','--leaf':'#63784b','--leaf-2':'#44562f' },
-    cosmos:   { '--petal-rim':'#fff2f7','--petal-tip':'#fbcadd','--petal-mid':'#ef8fba',
-                '--petal-in':'#d95291','--petal-core':'#7e2159','--vein':'#b03d78',
-                '--stamen':'#f7d154','--leaf':'#6d8a5a','--leaf-2':'#4e6b3f' },
-    magnolia: { '--petal-rim':'#fffbf0','--petal-tip':'#f7e6c2','--petal-mid':'#eccb92',
-                '--petal-in':'#d79f61','--petal-core':'#96592c','--vein':'#b8813f',
-                '--stamen':'#c9962f','--leaf':'#6b7d4e','--leaf-2':'#4d5c37' }
-  };
+  const composeBloomsEl = document.getElementById('composeBlooms');
+  composeBloomsEl.innerHTML = Object.entries(FLOWERS).map(([key, f]) =>
+    `<button class="swatch" data-bloom-set="${key}" aria-pressed="false" aria-label="${f.label}"
+             style="background:conic-gradient(${f.swatch[0]},${f.swatch[1]},${f.swatch[0]})"></button>`
+  ).join('');
+
+  /* A module-level counter, never reset: every one of the 8 [data-bloom]
+     hosts on the page gets its own uid on every render, so their <defs>
+     ids (pg/petal/pclip/veins/throat/lap/leaf) never collide — collision
+     would make url(#pg) resolve to whichever copy came first in the DOM. */
+  let bloomUid = 0;
+
   /* An unknown name falls back to the default bloom rather than throwing, so a
      link written against a later schema still opens. */
   function applyBloom(name) {
-    const bloom = name in BLOOMS ? name : DEFAULTS.f;
-    for (const [k, v] of Object.entries(BLOOMS[bloom]))
+    const key = name in FLOWERS ? name : DEFAULTS.f;
+    const flower = FLOWERS[key];
+    for (const [k, v] of Object.entries(bloomVars(flower)))
       root.style.setProperty(k, v);
+    document.querySelectorAll('[data-bloom]').forEach(host => {
+      host.innerHTML = renderBloomSVG(flower, ++bloomUid);
+    });
     document.querySelectorAll('[data-bloom-set]').forEach(b =>
-      b.setAttribute('aria-pressed', String(b.dataset.bloomSet === bloom)));
+      b.setAttribute('aria-pressed', String(b.dataset.bloomSet === key)));
   }
 
   document.querySelectorAll('[data-bloom-set]').forEach(btn => {
@@ -949,6 +1083,12 @@ body.compose-open{ overflow:hidden; }
       f: pressed ? pressed.dataset.bloomSet : DEFAULTS.f
     };
   }
+  // Opening, Body and Signature are all required — Create link stays disabled
+  // until every one of them has more than just whitespace in it.
+  function updateCreateEnabled() {
+    const filled = [fieldOpen, fieldBody, fieldSign].every(el => el.value.trim().length > 0);
+    composeCreateBtn.disabled = !filled;
+  }
   function updateLivePreview() {
     clampField(fieldOpen, OPEN_MAX);
     clampField(fieldBody, BODY_MAX);
@@ -956,6 +1096,7 @@ body.compose-open{ overflow:hidden; }
     updateCount(fieldOpen, countOpen, OPEN_MAX);
     updateCount(fieldBody, countBody, BODY_MAX);
     updateCount(fieldSign, countSign, SIGN_MAX);
+    updateCreateEnabled();
     render(composedConfig());               // one global config: this also redraws the
   }                                          // hidden main sheet, which is why closing
                                               // the modal has to restore it (see below)
