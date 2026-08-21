@@ -1,5 +1,16 @@
 name = "flowers-letters"
 compatibility_date = "2026-08-18"
+main = "src/index.js"
 
 [assets]
 directory = "."
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "paperbloom"
+database_id = "dd1a739c-b1c9-448e-9bb7-72780e12401a"
+
+[vars]
+ALLOWED_ORIGIN = "https://REPLACE-WITH-YOUR-DOMAIN"

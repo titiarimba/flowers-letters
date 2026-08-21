@@ -3,3 +3,7 @@ wrangler.toml
 .assetsignore
 node_modules
 .git
+src
+migrations
+.dev.vars
+.wrangler
