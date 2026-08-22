@@ -310,6 +310,23 @@ body{
 .to-wall:hover{ opacity:1; border-bottom-color:rgba(138,106,68,.6); }
 .to-wall:focus-visible{ outline:2px solid #2b231c; outline-offset:3px; }
 
+/* A signature in the corner, in the same hand as the rest of the writing.
+   Bottom-left is the one spot no chrome ever occupies: the arrows sit at the
+   vertical centre, the tools and toast at the horizontal centre.
+   z-index 40 is deliberate — it is under .veil (60), the compose backdrop (50)
+   and the modal (51), so the credit recedes on its own whenever someone is
+   reading a letter or writing one. No dim class, no state to keep in step. */
+.credit{
+  position:fixed; z-index:40;
+  left:clamp(14px,3vw,26px); bottom:max(18px, env(safe-area-inset-bottom, 0px));
+  font:400 16px/1.4 "Caveat","Bradley Hand","Segoe Script",cursive;
+  color:#8a6a44; opacity:.72; text-decoration:none;
+  border-bottom:1px solid rgba(138,106,68,.25); padding-bottom:1px;
+  transition:opacity .3s var(--ease), border-color .3s;
+}
+.credit:hover{ opacity:1; border-bottom-color:rgba(138,106,68,.6); }
+.credit:focus-visible{ outline:2px solid #2b231c; outline-offset:3px; opacity:1; }
+
 /* ---------- Phase 9: publish to the wall ---------- */
 .publish-row{ display:flex; gap:.6em; align-items:flex-start; cursor:pointer;
   padding:.7em .8em; border:1px solid rgba(43,35,28,.14); border-radius:10px;
@@ -696,6 +713,11 @@ body.is-empty .hub p,body.is-empty .hub .cta{display:none}
   </div>
   <div class="toast" id="toast"></div>
 </div>
+
+<!-- Outside <main>, so it survives garden mode hiding .page's children -->
+<a class="credit" id="credit"
+   href="https://www.linkedin.com/in/titiarimba"
+   target="_blank" rel="noopener noreferrer">created by Titi</a>
 
 <!-- ===================== compose modal ===================== -->
 <div class="compose-backdrop" id="composeBackdrop" hidden></div>
