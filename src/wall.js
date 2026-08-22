@@ -3,7 +3,7 @@ import { randomToken, sha256Hex, timingSafeEqual, findSpamReason, getIp, require
 // Must stay in sync with the FLOWERS table in index.html. Kept as a plain
 // list here (not imported) because the client bundle is a single static
 // HTML file with no build step.
-const FLOWER_KEYS = ['hibiscus', 'sakura', 'plumeria', 'daisy', 'lotus', 'marigold'];
+const FLOWER_KEYS = ['hibiscus', 'sakura', 'plumeria', 'daisy', 'lotus', 'marigold', 'rose'];
 
 const ID_LENGTH = 10;
 const DELETE_KEY_LENGTH = 24;
@@ -27,9 +27,9 @@ export async function createLetter(request, env) {
     return json(400, { error: 'invalid_body', message: 'Request body must be JSON.' }, request, env);
   }
 
-  const opening = clampString(body.opening, 40);
-  const bodyText = clampString(body.body, 500);
-  const signature = clampString(body.signature, 40);
+  const opening = clampString(body.opening, 20);
+  const bodyText = clampString(body.body, 300);
+  const signature = clampString(body.signature, 20);
   const flower = typeof body.flower === 'string' ? body.flower : null;
 
   if (opening === null || bodyText === null || signature === null) {

@@ -66,9 +66,13 @@ body{
   min-height:100svh;
   display:grid;
   place-items:center;
+  /* The painted hills are the world both modes live in: the garden grows out
+     of them, and a shared letter arrives in the same place. The flat colour
+     behind is the image's own sky tone, so a slow connection shows something
+     close rather than white. */
   background:
-    radial-gradient(120% 90% at 50% 8%, #f7f0e2 0%, var(--page) 46%, var(--page-2) 100%)
-    fixed;
+    url("background.jpg") center bottom / cover no-repeat,
+    #f7edd6;
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
   overflow-x:hidden;
 }
@@ -76,7 +80,7 @@ body{
 /* paper grain */
 .grain{
   position:fixed; inset:0; z-index:9; pointer-events:none;
-  opacity:.42; mix-blend-mode:multiply;
+  opacity:.14; mix-blend-mode:multiply;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='180' height='180' filter='url(%23n)' opacity='.5'/></svg>");
 }
 
@@ -171,22 +175,29 @@ body{
    --clipd  quarter of the centre diamond it covers when folded shut
    --clipf  its share of everything outside the diamond, extended off-sheet
    --ox/--oy hinge midpoint, --ax/--ay hinge axis, --s fold direction       */
+/* The quarters and fringes used to meet edge-to-edge. Two anti-aliased clip
+   edges that merely abut do not add up to an opaque pixel, so the page showed
+   through as a hairline cross and a hairline diamond across the bloom. Each
+   region is bled 0.4% past its neighbour instead — about one pixel at the
+   sheet's real size, so the overlap is invisible but the seam is gone.
+   The fringe sits in front of the faces (translateZ 2.4px), so it bleeds
+   *inwards* over the diamond edge; the faces bleed outwards over the cross. */
 .f-nw{ --ox:25%; --oy:25%; --ax:-1; --ay:1; --s:1;  --z:1.6px; --d:0ms;
-       --clip:polygon(0 0,50% 0,0 50%);
-       --clipd:polygon(50% 50%,50% 0,0 50%);
-       --clipf:polygon(50% 0,0 50%,-60% 50%,-60% -60%,50% -60%); }
+       --clip:polygon(0 0,50.4% 0.4%,0.4% 50.4%);
+       --clipd:polygon(50.4% 50.4%,50.4% -0.4%,-0.4% 50.4%);
+       --clipf:polygon(50.4% 0.4%,0.4% 50.4%,-60% 50.4%,-60% -60%,50.4% -60%); }
 .f-ne{ --ox:75%; --oy:25%; --ax:1;  --ay:1; --s:-1; --z:1.2px; --d:90ms;
-       --clip:polygon(100% 0,100% 50%,50% 0);
-       --clipd:polygon(50% 50%,50% 0,100% 50%);
-       --clipf:polygon(50% 0,100% 50%,160% 50%,160% -60%,50% -60%); }
+       --clip:polygon(100% 0,99.6% 50.4%,49.6% 0.4%);
+       --clipd:polygon(49.6% 50.4%,49.6% -0.4%,100.4% 50.4%);
+       --clipf:polygon(49.6% 0.4%,99.6% 50.4%,160% 50.4%,160% -60%,49.6% -60%); }
 .f-se{ --ox:75%; --oy:75%; --ax:-1; --ay:1; --s:-1; --z:.8px;  --d:180ms;
-       --clip:polygon(100% 100%,50% 100%,100% 50%);
-       --clipd:polygon(50% 50%,100% 50%,50% 100%);
-       --clipf:polygon(100% 50%,50% 100%,50% 160%,160% 160%,160% 50%); }
+       --clip:polygon(100% 100%,49.6% 99.6%,99.6% 49.6%);
+       --clipd:polygon(49.6% 49.6%,100.4% 49.6%,49.6% 100.4%);
+       --clipf:polygon(99.6% 49.6%,49.6% 99.6%,49.6% 160%,160% 160%,160% 49.6%); }
 .f-sw{ --ox:25%; --oy:75%; --ax:1;  --ay:1; --s:1;  --z:.4px;  --d:270ms;
-       --clip:polygon(0 100%,0 50%,50% 100%);
-       --clipd:polygon(50% 50%,0 50%,50% 100%);
-       --clipf:polygon(0 50%,50% 100%,50% 160%,-60% 160%,-60% 50%); }
+       --clip:polygon(0 100%,0.4% 49.6%,50.4% 99.6%);
+       --clipd:polygon(50.4% 49.6%,-0.4% 49.6%,50.4% 100.4%);
+       --clipf:polygon(0.4% 49.6%,50.4% 99.6%,50.4% 160%,-60% 160%,-60% 49.6%); }
 
 /* artwork fills its host exactly, and may spill past it */
 .art{ position:absolute; inset:0; width:100%; height:100%; display:block; overflow:visible; }
@@ -246,15 +257,29 @@ body{
 .lc-text p{ text-shadow:0 .5px 0 rgba(255,255,255,.5); }
 
 /* ---------- bloom picker ---------- */
-.blooms{ display:flex; align-items:center; gap:.8rem; }
+/* One line wherever the column is wide enough for all seven, wrapping by
+   itself when it is not — rather than a fixed column count that forces two
+   rows even when there is room for one. */
+.blooms{ display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; }
+/* No chip, no ring — the flower itself is the control. Colour carries the
+   choice: the ones you have not picked sit back in grey, the chosen one comes
+   into full colour. Scale moves with it so the state is not on colour alone. */
 .swatch{
-  width:28px; height:28px; padding:0; border-radius:50%; cursor:pointer;
-  border:1px solid rgba(43,35,28,.16);
-  box-shadow:inset 0 0 0 2px var(--paper);
-  transition:transform .3s var(--ease), box-shadow .3s;
+  width:44px; height:44px; flex:none; padding:0; border:0; background:none;
+  border-radius:50%; cursor:pointer; position:relative;
+  transition:transform .3s var(--ease);
 }
-.swatch:hover{ transform:scale(1.12); }
-.swatch[aria-pressed="true"]{ box-shadow:inset 0 0 0 2px var(--paper),0 0 0 1.5px #2b231c; }
+/* The bloom paints about 25% past its own box; pulled in so neighbours in the
+   grid never touch, but not clipped — the leaves stay whole. */
+/* Greyscaling a white flower leaves it white, and the daisy and frangipani
+   then disappear into the cream panel — so the rest state darkens as well as
+   desaturates, which keeps every silhouette readable. */
+.swatch .art{ transform:scale(.82); filter:grayscale(1) brightness(.86) opacity(.7);
+              transition:filter .35s var(--ease); }
+.swatch:hover .art{ filter:grayscale(.45) brightness(.96) opacity(.9); }
+.swatch:hover{ transform:scale(1.1); }
+.swatch[aria-pressed="true"] .art{ filter:none; }
+.swatch[aria-pressed="true"]{ transform:scale(1.08); }
 .swatch:focus-visible{ outline:2px solid #2b231c; outline-offset:3px; }
 
 @media (prefers-reduced-motion:reduce){
@@ -274,6 +299,41 @@ body{
 }
 .write-own:hover{ transform:translateY(-1px); box-shadow:0 6px 14px rgba(76,52,30,.16); }
 .write-own:focus-visible{ outline:2px solid #2b231c; outline-offset:3px; }
+
+/* quiet way through to the public wall — a line of text, not a nav item */
+.to-wall{
+  display:block; margin:1.1em auto 0; text-align:center;
+  font:400 13.5px/1.5 "Caveat","Bradley Hand","Segoe Script",cursive;
+  font-size:16px; color:#8a6a44; opacity:.85; text-decoration:none;
+  border-bottom:1px solid rgba(138,106,68,.28); width:fit-content; padding-bottom:1px;
+}
+.to-wall:hover{ opacity:1; border-bottom-color:rgba(138,106,68,.6); }
+.to-wall:focus-visible{ outline:2px solid #2b231c; outline-offset:3px; }
+
+/* ---------- Phase 9: publish to the wall ---------- */
+.publish-row{ display:flex; gap:.6em; align-items:flex-start; cursor:pointer;
+  padding:.7em .8em; border:1px solid rgba(43,35,28,.14); border-radius:10px;
+  background:rgba(255,255,255,.4); transition:border-color .2s, background .2s; }
+.publish-row:hover{ border-color:rgba(43,35,28,.28); background:rgba(255,255,255,.7); }
+.publish-row input{ margin:.15em 0 0; width:16px; height:16px; accent-color:#ab1f4e; flex:none; cursor:pointer; }
+.publish-label{ display:block; font-weight:600; font-size:13.5px; color:#41352a; }
+.publish-note{ display:block; margin-top:.2em; font-size:12px; line-height:1.45; color:#7a6653; }
+.publish-row:has(input:checked){ border-color:#ab1f4e; background:rgba(171,31,78,.05); }
+
+.confirm-lead{ margin:0 0 .7em; font-size:13px; color:#7a6653; }
+.confirm-card{ border:1px solid rgba(43,35,28,.14); border-radius:10px; padding:1em 1.1em;
+  background:radial-gradient(115% 100% at 30% 12%,#fdf8ec 0%,#fbf4e6 44%,#f3e8d2 100%);
+  font-family:"Caveat","Bradley Hand","Segoe Script",cursive; font-size:19px; line-height:1.45; color:#41352a;
+  max-height:210px; overflow-y:auto; }
+.confirm-card p{ margin:0 0 .35em; }
+.confirm-card .confirm-body{ white-space:pre-line; }
+.confirm-card .confirm-sign{ text-align:right; margin:.7em 0 0; }
+.confirm-warn{ margin:.85em 0 1em; font-size:12.5px; line-height:1.5; color:#8d1a1a; }
+.confirm-actions{ display:flex; gap:.6em; align-items:center; flex-wrap:wrap; }
+.confirm-actions .compose-create{ margin:0; }
+.confirm-error{ margin:.8em 0 0; font-size:12.5px; line-height:1.5; color:#8d1a1a;
+  border-left:2px solid #8d1a1a; padding-left:.7em; }
+
 
 body.compose-open{ overflow:hidden; }
 
@@ -384,6 +444,138 @@ body.compose-open{ overflow:hidden; }
    instead of overflowing the compose panel.
    ============================================================ */
 .blooms{ flex-wrap:wrap; }
+
+/* ============================================================
+   The garden (Phase 10, merged from wall.html).
+   Only the garden-specific rules live here: the folding sheet, the
+   bloom library and .lc-* text styles are already above and are
+   shared by both modes.
+   ============================================================ */
+#garden[hidden]{ display:none; }
+
+body.garden{ overflow:hidden; }
+/* The painting has its own horizon, so the gradient that used to suggest one
+   just muddies the hills underneath. */
+body.garden .ground{ display:none; }
+/* the viewer's stack is not shown in garden mode, but .flyer stays: it holds
+   the one #scene/#sheet both modes share */
+body.garden .page{ min-height:0; padding:0; gap:0; }
+body.garden .page > *:not(.flyer){ display:none; }
+
+.bed{position:fixed;inset:0;overflow-x:auto;overflow-y:hidden;z-index:2;cursor:grab;
+  overscroll-behavior-x:contain;scrollbar-width:none}
+.bed::-webkit-scrollbar{display:none}
+.bed.dragging{cursor:grabbing}
+.strip{position:relative;height:100%}
+.band{position:absolute;top:0;bottom:0;left:0;will-change:transform}
+.stalks{position:absolute;inset:0;overflow:visible;pointer-events:none}
+.band-0{z-index:10} .band-1{z-index:20} .band-2{z-index:30}
+.ground{position:fixed;left:0;right:0;bottom:0;height:132px;z-index:35;pointer-events:none;
+  background:linear-gradient(rgba(120,98,64,0) 0%,rgba(120,98,64,.09) 50%,rgba(96,78,50,.19) 100%)}
+
+.bloom{position:absolute;padding:0;border:0;background:none;cursor:pointer;display:block;
+  transform-origin:50% 100%;-webkit-tap-highlight-color:transparent;
+  animation:sway var(--dur) ease-in-out var(--delay) infinite;transition:filter .4s,opacity .2s;
+  /* the button box is not the target — see ::after */
+  pointer-events:none}
+/* The petals paint about 25% beyond the button's edge, so the box badly
+   understates the flower: its outer ring looked clickable but was not, and the
+   square's empty corners sat over neighbouring blooms and stole their taps.
+   A circle sized to the painted flower fixes both, with a 44px floor so the
+   small back-band flowers stay tappable on a phone. */
+.bloom::after{
+  content:'';position:absolute;left:50%;top:50%;
+  width:max(126%,44px);height:max(126%,44px);
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  pointer-events:auto}
+.bloom .art{position:absolute;inset:0;width:100%;height:100%;overflow:visible;display:block;
+  filter:drop-shadow(0 8px 12px rgba(76,52,30,.16))}
+.bloom:hover{animation-play-state:paused}
+.bloom:hover .art{filter:drop-shadow(0 16px 22px rgba(76,52,30,.28))}
+.bloom:focus-visible{outline:2px solid #ab1f4e;outline-offset:6px;border-radius:50%}
+.bloom.picked{opacity:0}
+@keyframes sway{0%,100%{transform:rotate(calc(var(--lean) - var(--amp)))}
+                50%{transform:rotate(calc(var(--lean) + var(--amp)))}}
+/* A flower opening where it was just planted. transform-origin is the base of
+   the stem, so it grows upward rather than swelling from its middle. The class
+   is removed on animationend, which hands the flower back to the sway above —
+   two animations on transform at once would fight. */
+@keyframes bloom-in{
+  0%   { transform:rotate(calc(var(--lean) - 14deg)) scale(.12); opacity:0 }
+  55%  { transform:rotate(var(--lean)) scale(1.14); opacity:1 }
+  100% { transform:rotate(var(--lean)) scale(1); opacity:1 }
+}
+.bloom.just-planted{ animation:bloom-in .85s var(--ease) .2s both; }
+
+.hub{position:fixed;top:clamp(2rem,11vh,6rem);left:50%;transform:translateX(-50%);
+  z-index:50;text-align:center;width:min(92vw,540px);pointer-events:none;transition:opacity .4s}
+.hub>*{pointer-events:auto}
+.hub.dim{opacity:0;pointer-events:none}
+.hub h1{margin:0 0 .42em;font-family:Georgia,serif;font-weight:400;font-size:clamp(1.7rem,4.6vw,2.5rem);line-height:1.1}
+.hub p{margin:0 0 1.75em;opacity:.66;font-size:clamp(.82rem,2.2vw,.98rem);line-height:1.55}
+a.cta{text-decoration:none}
+.cta{font:inherit;font-size:clamp(.9rem,2.5vw,1rem);padding:.8em 1.8em;border-radius:999px;
+  border:1px solid rgba(43,35,28,.16);background:var(--paper);color:var(--ink,#41352a);cursor:pointer;
+  display:inline-block;
+  box-shadow:0 10px 26px rgba(76,52,30,.16),inset 0 1px 0 rgba(255,255,255,.7)}
+.arrow{position:fixed;top:50%;transform:translateY(-50%);z-index:45;width:44px;height:44px;
+  border-radius:50%;border:1px solid rgba(43,35,28,.14);background:rgba(251,244,230,.9);
+  color:#41352a;cursor:pointer;display:grid;place-items:center;
+  box-shadow:0 6px 18px rgba(76,52,30,.16);opacity:0;transition:opacity .4s}
+.arrow.on{opacity:1}
+.arrow-l{left:18px} .arrow-r{right:18px}
+@media (pointer:coarse){.arrow{display:none}}
+
+.veil{position:fixed;inset:0;z-index:60;background:rgba(236,226,205,.9);
+  backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .5s}
+.veil.on{opacity:1;pointer-events:auto}
+
+/* In viewer mode .flyer must not exist as a box at all, so the landing page
+   lays out exactly as it did before the merge. */
+.flyer{ display:contents; }
+body.garden .flyer{
+  display:block;position:fixed;z-index:70;left:50%;top:50%;pointer-events:none;
+  width:var(--S);height:var(--S);margin-left:calc(var(--S) / -2);margin-top:calc(var(--S) / -2);
+  transform-origin:50% 50%;visibility:hidden}
+body.garden .flyer.live{visibility:visible;pointer-events:auto}
+body.garden .flyer.moving{transition:transform .78s var(--ease)}
+body.garden .flyer .scene{width:100%;height:100%;overflow:visible}
+
+.closer{position:fixed;top:20px;right:20px;z-index:80;width:44px;height:44px;border-radius:50%;
+  border:1px solid rgba(43,35,28,.14);background:rgba(251,244,230,.92);color:#41352a;
+  cursor:pointer;font-size:1.1rem;display:grid;place-items:center;opacity:0;
+  transition:opacity .4s;pointer-events:none}
+.closer.on{opacity:1;pointer-events:auto}
+
+.state{position:fixed;left:50%;top:52%;transform:translate(-50%,-50%);z-index:44;text-align:center;
+  width:min(90vw,420px);opacity:0;pointer-events:none;transition:opacity .5s}
+.state.on{opacity:1;pointer-events:auto}
+body.is-empty .hub p,body.is-empty .hub .cta{display:none}
+.state p{margin:0 0 1.1em;opacity:.68;line-height:1.55}
+.state .cta{font-size:.95rem}
+.spinner{width:34px;height:34px;margin:0 auto;border-radius:50%;
+  border:2px solid rgba(122,90,54,.2);border-top-color:#ab1f4e;animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.tools{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:80;
+  display:flex;gap:10px;align-items:center;opacity:0;pointer-events:none;transition:opacity .4s}
+.tools.on{opacity:1;pointer-events:auto}
+.tool{font:inherit;font-size:.82rem;padding:.5em 1.05em;border-radius:999px;cursor:pointer;
+  border:1px solid rgba(43,35,28,.14);background:rgba(251,244,230,.92);color:#41352a;
+  text-decoration:none;display:inline-block}
+.tool:hover{background:#fff}
+.tool-danger{color:#8d1a1a}
+.toast{position:fixed;left:50%;bottom:84px;transform:translate(-50%,10px);z-index:90;
+  background:rgba(43,35,28,.92);color:#fbf4e6;font-size:.85rem;padding:.65em 1.2em;border-radius:999px;
+  opacity:0;pointer-events:none;transition:opacity .35s,transform .35s}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+@media (prefers-reduced-motion:reduce){
+  .bloom{animation:none;transform:rotate(var(--lean))}
+  .bloom.just-planted{animation:none}
+  .band{transform:none!important}
+}
 </style>
 </head>
 <body>
@@ -419,6 +611,7 @@ body.compose-open{ overflow:hidden; }
 <!-- ===================== page ===================== -->
 <main class="page">
 
+  <div class="flyer" id="flyer">
   <div class="scene" id="scene" role="button" tabindex="0"
        aria-expanded="false"
        aria-label="Paper flower. Activate to unfold it into a letter.">
@@ -449,6 +642,8 @@ body.compose-open{ overflow:hidden; }
     </div>
   </div>
 
+  </div><!-- /.flyer -->
+
   <!-- the letter, once, for screen readers -->
   <div class="sr-only">
     <p class="sr-open"></p>
@@ -458,7 +653,49 @@ body.compose-open{ overflow:hidden; }
 
   <button class="write-own" id="writeOwnBtn" type="button">Write your own</button>
 
+  <a class="to-wall" href="/">or read the ones others left</a>
+
 </main>
+
+<!-- ===================== the garden ===================== -->
+<div id="garden" hidden>
+  <div class="bed" id="bed" tabindex="0" role="region" aria-label="A garden of letters. Scroll sideways.">
+    <div class="strip" id="strip">
+      <div class="band band-0" id="band0"></div>
+      <div class="band band-1" id="band1"></div>
+      <div class="band band-2" id="band2"></div>
+    </div>
+  </div>
+  <div class="ground" aria-hidden="true"></div>
+  <button class="arrow arrow-l" id="arrowL" aria-label="Scroll left">&#8592;</button>
+  <button class="arrow arrow-r on" id="arrowR" aria-label="Scroll right">&#8594;</button>
+
+  <div class="hub" id="hub">
+    <h1>Paper Bloom</h1>
+    <p>Every flower here is a letter someone left. Pick one.</p>
+    <a class="cta" href="/?compose=1">Write your own</a>
+  </div>
+
+  <div class="state" id="stLoading"><div class="spinner"></div></div>
+
+  <div class="state" id="stEmpty">
+    <p>No letters here yet.<br>The first flower in this garden could be yours.</p>
+    <a class="cta" id="emptyCta" href="/?compose=1">Write the first one</a>
+  </div>
+
+  <div class="state" id="stError">
+    <p>The garden could not be reached just now.</p>
+    <button class="cta" id="retry" type="button">Try again</button>
+  </div>
+
+  <div class="veil" id="veil"></div>
+  <button class="closer" id="closer" aria-label="Close letter">&#10005;</button>
+  <div class="tools" id="tools">
+    <button class="tool" id="toolCopy" type="button">copy letter link</button>
+    <button class="tool tool-danger" id="toolReport" type="button">report</button>
+  </div>
+  <div class="toast" id="toast"></div>
+</div>
 
 <!-- ===================== compose modal ===================== -->
 <div class="compose-backdrop" id="composeBackdrop" hidden></div>
@@ -474,25 +711,25 @@ body.compose-open{ overflow:hidden; }
           <div class="compose-field">
             <div class="compose-field-head">
               <label for="fieldOpen">Opening</label>
-              <span class="compose-count" id="countOpen">0 / 40</span>
+              <span class="compose-count" id="countOpen">0 / 20</span>
             </div>
-            <input type="text" id="fieldOpen" maxlength="40" placeholder="hi," required aria-required="true">
+            <input type="text" id="fieldOpen" maxlength="20" placeholder="hi," required aria-required="true">
           </div>
 
           <div class="compose-field">
             <div class="compose-field-head">
               <label for="fieldBody">Body</label>
-              <span class="compose-count" id="countBody">0 / 500</span>
+              <span class="compose-count" id="countBody">0 / 300</span>
             </div>
-            <textarea id="fieldBody" rows="6" maxlength="500" required aria-required="true"></textarea>
+            <textarea id="fieldBody" rows="6" maxlength="300" required aria-required="true"></textarea>
           </div>
 
           <div class="compose-field">
             <div class="compose-field-head">
               <label for="fieldSign">Signature</label>
-              <span class="compose-count" id="countSign">0 / 40</span>
+              <span class="compose-count" id="countSign">0 / 20</span>
             </div>
-            <input type="text" id="fieldSign" maxlength="40" placeholder="always," required aria-required="true">
+            <input type="text" id="fieldSign" maxlength="20" placeholder="always," required aria-required="true">
           </div>
 
           <div class="compose-field">
@@ -500,7 +737,32 @@ body.compose-open{ overflow:hidden; }
             <div class="blooms" id="composeBlooms"></div>
           </div>
 
+          <div class="compose-field">
+            <label class="publish-row" for="fieldPublish">
+              <input type="checkbox" id="fieldPublish">
+              <span>
+                <span class="publish-label">Also plant this in the public garden</span>
+                <span class="publish-note">Anyone can read it on the wall.</span>
+              </span>
+            </label>
+          </div>
+
           <button class="compose-create" id="composeCreateBtn" type="button" disabled>Create link</button>
+        </div>
+
+        <div class="compose-confirm" id="composeConfirmView" hidden>
+          <p class="confirm-lead">This is exactly what a stranger will read:</p>
+          <div class="confirm-card">
+            <p class="confirm-open" id="confirmOpen"></p>
+            <p class="confirm-body" id="confirmBody"></p>
+            <p class="confirm-sign" id="confirmSign"></p>
+          </div>
+          <p class="confirm-warn">Once it is planted, anyone can read it. You can't pull it back out from this browser afterwards.</p>
+          <div class="confirm-actions">
+            <button class="compose-create" id="confirmPublishBtn" type="button">Plant it in the garden</button>
+            <button class="compose-back" id="confirmCancelBtn" type="button">Not yet</button>
+          </div>
+          <p class="confirm-error" id="confirmError" hidden></p>
         </div>
 
         <div class="compose-link" id="composeLinkView" hidden>
@@ -513,7 +775,6 @@ body.compose-open{ overflow:hidden; }
             <a class="compose-preview-link" id="previewLinkBtn" href="#" target="_blank" rel="noopener noreferrer">Preview what they'll see</a>
             <span class="compose-copy-status" id="copyStatus" aria-live="polite"></span>
           </div>
-          <button class="compose-back" id="backToEditBtn" type="button">Back to editing</button>
         </div>
 
       </div>
@@ -568,7 +829,10 @@ const PETALS = {
   plumeria: { reach: 86,   d: 'M100 100C83 88 60 78 57 55 54 32 71 14 100 14 129 14 146 32 143 55 140 78 117 88 100 100Z' },
   ray:      { reach: 86,   d: 'M100 100C93 85 83 62 85 38 86 23 92 13 97 13 98 17 99 19 100 21 101 19 102 17 103 13 108 13 114 23 115 38 117 62 107 85 100 100Z' },
   lotus:    { reach: 92,   d: 'M100 100C88 84 76 60 78 38 79 24 88 12 100 8 112 12 121 24 122 38 124 60 112 84 100 100Z' },
-  ruffle:   { reach: 81,   d: 'M100 100C88 90 70 80 66 60 62 42 70 26 82 22 90 19 95 25 100 32 105 25 110 19 118 22 130 26 138 42 134 60 130 80 112 90 100 100Z' }
+  ruffle:   { reach: 81,   d: 'M100 100C88 90 70 80 66 60 62 42 70 26 82 22 90 19 95 25 100 32 105 25 110 19 118 22 130 26 138 42 134 60 130 80 112 90 100 100Z' },
+  /* Broader and rounder than ruffle, cupped, with a soft dip at the tip —
+     a rose petal rather than a ray or a frill. */
+  rose:     { reach: 81,   d: 'M100 100C84 87 64 72 61 51 58 33 69 20 84 19 92 18 97 25 100 31 103 25 108 18 116 19 131 20 142 33 139 51 136 72 116 87 100 100Z' }
 };
 
 /* The original four palettes, preserved verbatim.
@@ -595,49 +859,58 @@ const FLOWERS = {
   hibiscus: {
     label: 'Hibiscus', petal: 'hibiscus', rings: [[5, 1, 0]],
     centre: 'column', scale: 1.40, tilt: -13, leaves: [58, -32],
-    vars: LEGACY_VARS.hibiscus, swatch: ['#ffd479', '#ab1f4e']
+    vars: LEGACY_VARS.hibiscus
   },
   /*poppy: {
     label: 'Poppy', petal: 'hibiscus', rings: [[5, 1, 0]],
     centre: 'column', scale: 1.40, tilt: -13, leaves: [58, -32],
-    vars: LEGACY_VARS.poppy, swatch: ['#fb8a5c', '#3d1417']
+    vars: LEGACY_VARS.poppy
   },
   cosmos: {
     label: 'Cosmos', petal: 'hibiscus', rings: [[5, 1, 0]],
     centre: 'column', scale: 1.40, tilt: -13, leaves: [58, -32],
-    vars: LEGACY_VARS.cosmos, swatch: ['#fbcadd', '#7e2159']
+    vars: LEGACY_VARS.cosmos
   },
   magnolia: {
     label: 'Magnolia', petal: 'hibiscus', rings: [[5, 1, 0]],
     centre: 'column', scale: 1.40, tilt: -13, leaves: [58, -32],
-    vars: LEGACY_VARS.magnolia, swatch: ['#f7e6c2', '#96592c']
+    vars: LEGACY_VARS.magnolia
   },
 */
   /* --- new species --- */
   sakura: {
     label: 'Cherry blossom', petal: 'sakura', rings: [[5, 1, 0]],
     centre: 'stamens', scale: 1.52, tilt: 8, leaves: [],
-    tip: '#fff4f8', core: '#d9578c', leaf: '#6b8a5a', ramp: [0, 6, 16, 46, 84], swatch: ['#fbd0e0', '#d9578c']
+    tip: '#fff4f8', core: '#d9578c', leaf: '#6b8a5a', ramp: [0, 6, 16, 46, 84]
   },
   plumeria: {
     label: 'Frangipani', petal: 'plumeria', rings: [[5, 1, 0]],
     centre: 'throat', scale: 1.44, tilt: -20, leaves: [52, -40],
-    tip: '#fffaef', core: '#ee9f10', leaf: '#3f6b46', stamen: '#f7c948', ramp: [0, 5, 13, 34, 72], swatch: ['#fffaef', '#ee9f10']
+    tip: '#fffaef', core: '#ee9f10', leaf: '#3f6b46', stamen: '#f7c948', ramp: [0, 5, 13, 34, 72]
   },
   daisy: {
     label: 'Daisy', petal: 'ray', rings: [[13, 1, 0]],
     centre: 'disc', scale: 1.46, tilt: -6, leaves: [64, -28],
-    tip: '#ffffff', core: '#e8991f', leaf: '#6d8a5a', stamen: '#fbe7a8', ramp: [0, 4, 10, 24, 52], swatch: ['#ffffff', '#e8991f']
+    tip: '#ffffff', core: '#e8991f', leaf: '#6d8a5a', stamen: '#fbe7a8', ramp: [0, 4, 10, 24, 52]
   },
   lotus: {
     label: 'Lotus', petal: 'lotus', rings: [[8, 1, 0], [8, 0.68, 22.5]],
     centre: 'pod', scale: 1.36, tilt: 0, leaves: [],
-    tip: '#fff2f6', core: '#d4477a', leaf: '#4f7d5c', stamen: '#e8d9a8', swatch: ['#fbd7e6', '#d4477a']
+    tip: '#fff2f6', core: '#d4477a', leaf: '#4f7d5c', stamen: '#e8d9a8'
   },
   marigold: {
     label: 'Marigold', petal: 'ruffle', rings: [[11, 1, 0], [9, 0.72, 16], [7, 0.46, 30]],
     centre: 'dense', scale: 1.52, tilt: -9, leaves: [60, -34],
-    tip: '#ffc23d', core: '#a82c14', leaf: '#5d7440', swatch: ['#ffc23d', '#a82c14']
+    tip: '#ffc23d', core: '#a82c14', leaf: '#5d7440'
+  },
+  rose: {
+    /* Four rings, each smaller and turned off the last, so the centre closes
+       into a tight whorl the way a rose does. The ramp holds the deep crimson
+       well out from the middle before it lifts to the bright edge. */
+    label: 'Rose', petal: 'rose', rings: [[8, 1, 0], [7, 0.74, 25], [6, 0.52, 12], [5, 0.32, 34]],
+    centre: 'dense', scale: 1.46, tilt: -6, leaves: [56, -30],
+    tip: '#e63946', core: '#6b0d1c', leaf: '#3f6b46', stamen: '#b02132',
+    ramp: [0, 10, 26, 62, 90]
   }
 };
 
@@ -813,8 +1086,16 @@ function bloomVars(f) {
 
   /* The letter is painted onto all five panels of the sheet, so none of them
      are exposed to assistive tech — the sr-only copy carries the text once. */
+  /* The template's <defs> id is cloned onto every panel, so it has to be made
+     unique per copy — ten identical #lcv gradients otherwise, and url(#lcv)
+     resolves to whichever landed in the DOM first. */
+  let lcUid = 0;
   document.querySelectorAll('[data-letter]').forEach(host => {
-    host.appendChild(tplLetter.cloneNode(true));
+    const copy = tplLetter.cloneNode(true);
+    const id = 'lcv' + (++lcUid);
+    copy.querySelectorAll('[id="lcv"]').forEach(el => { el.id = id; });
+    copy.querySelectorAll('[fill="url(#lcv)"]').forEach(el => { el.setAttribute('fill', 'url(#' + id + ')'); });
+    host.appendChild(copy);
     host.setAttribute('aria-hidden', 'true');
   });
 
@@ -924,8 +1205,13 @@ function bloomVars(f) {
       : 'Paper flower. Activate to unfold it into a letter.');
   }
 
-  scene.addEventListener('click', () => setOpen(!sheet.classList.contains('open')));
+  /* In garden mode the same sheet is driven by openLetter/closeLetter, and the
+     document-level handler below closes it — toggling the fold here as well
+     would make the two fight. */
+  const inGarden = () => document.body.classList.contains('garden');
+  scene.addEventListener('click', () => { if (inGarden()) return; setOpen(!sheet.classList.contains('open')); });
   scene.addEventListener('keydown', e => {
+    if (inGarden()) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       setOpen(!sheet.classList.contains('open'));
@@ -934,10 +1220,17 @@ function bloomVars(f) {
 
   /* ---------- blooms ---------- */
   const composeBloomsEl = document.getElementById('composeBlooms');
-  composeBloomsEl.innerHTML = Object.entries(FLOWERS).map(([key, f]) =>
-    `<button class="swatch" data-bloom-set="${key}" aria-pressed="false" aria-label="${f.label}"
-             style="background:conic-gradient(${f.swatch[0]},${f.swatch[1]},${f.swatch[0]})"></button>`
-  ).join('');
+  /* Each swatch is the flower itself rather than a colour chip, so the picker
+     shows what is on offer. Two things this depends on: the palette goes on the
+     button, never on :root — seven swatches on one page each need their own —
+     and every SVG needs a unique uid, or they all inherit the first one's
+     gradients and petal path. The 'sw' prefix keeps them clear of the sheet's
+     numeric uids, the garden's 'g' and the flyer's 'f'. */
+  composeBloomsEl.innerHTML = Object.entries(FLOWERS).map(([key, f], i) => {
+    const vars = Object.entries(bloomVars(f)).map(([prop, val]) => `${prop}:${val}`).join(';');
+    return `<button class="swatch" type="button" data-bloom-set="${key}" aria-pressed="false"
+             aria-label="${f.label}" title="${f.label}" style="${vars}">${renderBloomSVG(f, 'sw' + i)}</button>`;
+  }).join('');
 
   /* A module-level counter, never reset: every one of the 8 [data-bloom]
      hosts on the page gets its own uid on every render, so their <defs>
@@ -999,10 +1292,13 @@ function bloomVars(f) {
         showLinkNotice();
       }
     }
+    // Dressing the sheet also dresses the compose modal's preview, so this runs
+    // in both modes; in garden mode the flyer is hidden until a flower is picked.
     render(config);
     applyBloom(config.f);
+    // A shared letter link must never wait on — or fire — a wall fetch.
+    if (!raw) startGarden();
   }
-  boot();
 
   /* ---------- temporary: run window.__selftest() in the console ---------- */
   window.__selftest = function () {
@@ -1051,11 +1347,15 @@ function bloomVars(f) {
   const composeFormView = document.getElementById('composeFormView');
   const composeLinkView = document.getElementById('composeLinkView');
   const composeCreateBtn = document.getElementById('composeCreateBtn');
-  const backToEditBtn   = document.getElementById('backToEditBtn');
   const copyLinkBtn     = document.getElementById('copyLinkBtn');
   const previewLinkBtn  = document.getElementById('previewLinkBtn');
   const linkOutput      = document.getElementById('linkOutput');
   const copyStatus      = document.getElementById('copyStatus');
+  const fieldPublish       = document.getElementById('fieldPublish');
+  const composeConfirmView = document.getElementById('composeConfirmView');
+  const confirmPublishBtn  = document.getElementById('confirmPublishBtn');
+  const confirmCancelBtn   = document.getElementById('confirmCancelBtn');
+  const confirmError       = document.getElementById('confirmError');
   const fieldOpen = document.getElementById('fieldOpen');
   const fieldBody = document.getElementById('fieldBody');
   const fieldSign = document.getElementById('fieldSign');
@@ -1063,7 +1363,10 @@ function bloomVars(f) {
   const countBody = document.getElementById('countBody');
   const countSign = document.getElementById('countSign');
 
-  const OPEN_MAX = 40, BODY_MAX = 500, SIGN_MAX = 40;   // mirrors sanitize()'s own clamps
+  /* What this composer will let you write. sanitize() below is deliberately
+     more permissive (40/500/40): it is the *read* path for #fragment links, and
+     clamping it to these values would truncate letters shared before this change. */
+  const OPEN_MAX = 20, BODY_MAX = 300, SIGN_MAX = 20;
 
   function clampField(el, max) {
     if (el.value.length > max) el.value = el.value.slice(0, max);
@@ -1149,14 +1452,27 @@ function bloomVars(f) {
     composeModal.hidden = true;
     composeBackdrop.hidden = true;
     composeLinkView.hidden = true;
+    composeConfirmView.hidden = true;
     composeFormView.hidden = false;
     document.body.classList.remove('compose-open');
     document.removeEventListener('keydown', onComposeKeydown);
     if (restoreConfig) { render(restoreConfig); applyBloom(restoreConfig.f); }
-    (restoreFocusTo || writeOwnBtn).focus();
+    /* In garden mode the whole .page stack is hidden, so writeOwnBtn cannot
+       take focus and it would fall to <body>. Hand it to the garden instead. */
+    const back = restoreFocusTo && restoreFocusTo.offsetParent !== null ? restoreFocusTo
+               : (document.body.classList.contains('garden') ? bed : writeOwnBtn);
+    if (back) back.focus();
   }
 
   writeOwnBtn.addEventListener('click', openCompose);
+
+  /* The wall links here with ?compose=1 so "Write your own" lands straight in
+     the composer. The param is stripped afterwards so a refresh — or a copied
+     URL — is just the page again. The hash is preserved: it may hold a letter. */
+  if (new URLSearchParams(location.search).get('compose') === '1') {
+    history.replaceState(null, '', location.pathname + location.hash);
+    openCompose();
+  }
   composeCloseBtn.addEventListener('click', closeCompose);
   composeBackdrop.addEventListener('click', closeCompose);
   /* .compose-modal is a full-viewport flex container stacked above
@@ -1180,22 +1496,109 @@ function bloomVars(f) {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePreviewFold(); }
   });
 
-  composeCreateBtn.addEventListener('click', () => {
-    const config = sanitize(composedConfig());
+  /* Phase 9 — publishing to the wall.
+
+     The share link is built the same way whether or not the letter is
+     published: the fragment is the letter, and the database row is only an
+     index for the wall. Publishing never changes the URL. */
+  const WALL_API = '/api/wall';
+  const PLANTED_KEY = 'paperbloom.planted';
+
+  /* The API returns a delete key exactly once, so it is kept here even though
+     nothing in this phase reads it back: Phase 11's "your letters" view is what
+     lets an author take a letter down, and without the key that is impossible. */
+  function rememberPlanted(entry) {
+    try {
+      const prev = JSON.parse(localStorage.getItem(PLANTED_KEY)) || [];
+      localStorage.setItem(PLANTED_KEY, JSON.stringify([...prev, entry]));
+    } catch { /* private mode — the letter is still planted, the key is just not kept */ }
+  }
+
+  function showLinkView(config) {
     const url = location.origin + location.pathname + '#' + encode(config);
     linkOutput.value = url;
     previewLinkBtn.href = url;
     composeFormView.hidden = true;
+    composeConfirmView.hidden = true;
     composeLinkView.hidden = false;
     linkOutput.focus();
     linkOutput.select();
+  }
+
+  composeCreateBtn.addEventListener('click', () => {
+    const config = sanitize(composedConfig());
+    if (!fieldPublish.checked) { showLinkView(config); return; }
+
+    // Show the letter as a stranger reads it before anything is written.
+    document.getElementById('confirmOpen').textContent = config.o;
+    document.getElementById('confirmBody').textContent = config.b;
+    document.getElementById('confirmSign').textContent = config.s;
+    confirmError.hidden = true;
+    composeFormView.hidden = true;
+    composeConfirmView.hidden = false;
+    confirmPublishBtn.focus();
   });
 
-  backToEditBtn.addEventListener('click', () => {
-    composeLinkView.hidden = true;
+  confirmCancelBtn.addEventListener('click', () => {
+    composeConfirmView.hidden = true;
     composeFormView.hidden = false;
-    fieldOpen.focus();
+    fieldPublish.focus();
   });
+
+  confirmPublishBtn.addEventListener('click', async () => {
+    const config = sanitize(composedConfig());
+    const url = location.origin + location.pathname + '#' + encode(config);
+
+    /* Started here, inside the click, and awaited much later: the link is built
+       from the form alone and never needs the server, so there is no reason to
+       wait for the POST — and waiting would lose the gesture the clipboard
+       needs. Publishing does not change the URL; the row is only the wall's
+       index. */
+    const copying = copyToClipboard(url).then(() => true, () => false);
+
+    confirmPublishBtn.disabled = true;
+    const originalLabel = confirmPublishBtn.textContent;
+    confirmPublishBtn.textContent = 'Planting\u2026';
+    confirmError.hidden = true;
+    try {
+      const res = await fetch(WALL_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ opening: config.o, body: config.b, signature: config.s, flower: config.f })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        // The server re-validates independently of this form: links, long
+        // digit runs and the hourly cap all surface here with their reason.
+        // Nothing closes — the letter is not planted, so the author stays put.
+        confirmError.textContent = data.message || 'That could not be planted right now. Please try again.';
+        confirmError.hidden = false;
+        return;
+      }
+      rememberPlanted({ id: data.id, deleteKey: data.deleteKey, at: Date.now() });
+
+      /* Only the garden can show a flower opening. Someone who composed from a
+         letter page has no garden behind the modal — and the toast lives inside
+         it — so they keep the link view they would have had before. */
+      if (!document.body.classList.contains('garden')) { showLinkView(config); return; }
+
+      // The step ends here: the modal gets out of the way and the garden shows
+      // the letter opening where it now grows.
+      closeCompose();
+      const copied = await copying;
+      await replantFromTheTop(data.id);
+      toast(copied
+        ? 'Planted. Link copied \u2014 paste it anywhere.'
+        : 'Planted. Open your flower to copy its link.', 7000);
+    } catch {
+      confirmError.textContent = 'Could not reach the garden. Your link below still works.';
+      confirmError.hidden = false;
+    } finally {
+      confirmPublishBtn.disabled = false;
+      confirmPublishBtn.textContent = originalLabel;
+    }
+  });
+
 
   let copyStatusTimer = 0;
   copyLinkBtn.addEventListener('click', async () => {
@@ -1209,6 +1612,387 @@ function bloomVars(f) {
     clearTimeout(copyStatusTimer);
     copyStatusTimer = setTimeout(() => { copyStatus.textContent = ''; }, 2500);
   });
+
+
+  /* ============================================================
+     The garden. Runs only when the page was opened without a
+     #letter. It reuses this file's bloom library, folding sheet,
+     encode() and refit() — nothing here is a second copy.
+     ============================================================ */
+  const WALL_ENDPOINT = '/api/wall';
+
+  /* The one place that knows the API's shape. Verified against Phase 8:
+     { letters: [ { id, opening, body, signature, flower, created_at } ],
+       nextCursor: "<opaque>" | null }  — note created_at is snake_case. */
+  function adaptList(json) {
+    return {
+      letters: (json.letters || []).map(r => ({
+        id:     r.id,
+        open:   r.opening,
+        body:   r.body,
+        sign:   r.signature,
+        flower: FLOWERS[r.flower] ? r.flower : DEFAULTS.f,   // never trust it blindly
+        at:     r.created_at
+      })).filter(l => l.id),
+      cursor: json.nextCursor ?? null
+    };
+  }
+
+  /* Scatter is seeded from the letter id, never Math.random(): positions must
+     survive a reload and a resize, or the garden reads as broken. */
+  const seedHash = str => { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+  const rng = seed => { let a = seed; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; };
+
+  const gardenEl = document.getElementById('garden');
+  const bed      = document.getElementById('bed');
+  const strip    = document.getElementById('strip');
+  const gBands   = [0, 1, 2].map(i => document.getElementById('band' + i));
+  /* Heights are no longer fractions of the viewport — they are derived in
+     plant() so each band owns a stripe that cannot overlap its neighbours.
+     Back band: smallest flowers, tallest stems. Front band: biggest, shortest. */
+  const BANDS = [
+    { rate: .55, size: [54, 78],   spacing: 150, opacity: .66 },
+    { rate: .78, size: [80, 110],  spacing: 180, opacity: .85 },
+    { rate: 1,   size: [112, 158], spacing: 225, opacity: 1 }
+  ];
+  /* The bloom paints about 25% beyond its own box, so a band's stripe has to be
+     reserved from the painted radius, not the element height. */
+  const PAINT_R = 0.625;
+
+  const stLoading = document.getElementById('stLoading');
+  const stEmpty   = document.getElementById('stEmpty');
+  const stError   = document.getElementById('stError');
+  const hub       = document.getElementById('hub');
+  const flyer     = document.getElementById('flyer');
+  const veil      = document.getElementById('veil');
+  const closer    = document.getElementById('closer');
+  const tools     = document.getElementById('tools');
+  const toolCopy  = document.getElementById('toolCopy');
+  const toolReport = document.getElementById('toolReport');
+  const arrowL    = document.getElementById('arrowL');
+  const arrowR    = document.getElementById('arrowR');
+  const show = (el, on) => el.classList.toggle('on', on);
+
+  let gUid = 0, contentW = 0;
+  let gCursor = null, gDone = false, gLoading = false, gTotal = 0;
+  let justPlantedId = null;
+
+  /* The garden can only be appended to — each band keeps a running x that
+     grows rightward — but a new letter is the newest, so it belongs at the far
+     left. Rather than fight that, throw page one away and ask for it again:
+     the new flower then arrives in its rightful place. Every other flower
+     shifts too, because which band a letter lands in follows its position in
+     the page; that reshuffle happens while the modal is still closing over it. */
+  function replantFromTheTop(newId) {
+    justPlantedId = newId;
+    gBands.forEach(b => { b.innerHTML = ''; delete b.dataset.x; });
+    contentW = 0; gCursor = null; gDone = false; gLoading = false; gTotal = 0;
+    strip.style.width = '';
+    bed.scrollLeft = 0;
+    show(stEmpty, false); show(stError, false);
+    document.body.classList.remove('is-empty');
+    return loadMore();
+  }
+
+  /* Rebuilt client-side from the returned fields with this file's own
+     encode(), so a wall link and a composed link are byte-identical. */
+  const letterUrl = L => location.origin + location.pathname + '#' +
+    encode({ v: DEFAULTS.v, o: L.open, b: L.body, s: L.sign, f: L.flower });
+
+  async function loadMore() {
+    if (gLoading || gDone) return;
+    gLoading = true;
+    if (gTotal === 0) { show(stLoading, true); hub.classList.add('dim'); }
+    show(stError, false);
+    try {
+      const url = WALL_ENDPOINT + (gCursor ? '?cursor=' + encodeURIComponent(gCursor) : '');
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const { letters, cursor: next } = adaptList(await res.json());
+      gCursor = next;
+      if (!next || letters.length === 0) gDone = true;
+      show(stLoading, false);
+      hub.classList.remove('dim');
+      if (letters.length) { plant(letters); gTotal += letters.length; }
+      if (gTotal === 0) show(stEmpty, true);
+      document.body.classList.toggle('is-empty', gTotal === 0);
+      onGardenScroll();
+    } catch (err) {
+      show(stLoading, false);
+      hub.classList.remove('dim');
+      if (gTotal === 0) { show(stError, true); document.body.classList.add('is-empty'); }
+      else toast('Could not load more letters');
+      onGardenScroll();
+      console.warn('[wall]', err);
+    } finally {
+      gLoading = false;
+    }
+  }
+
+  function plant(items) {
+    const narrow = innerWidth < 700, scale = narrow ? .72 : 1;
+    const NS = 'http://www.w3.org/2000/svg';
+
+    /* Stack the three stripes from the ground up, each tall enough for its own
+       largest painted flower plus a gap. Two flowers from different bands can
+       then share an x position without either covering the other — which is
+       what was swallowing the middle band's clicks. */
+    const rMax = bi => BANDS[bi].size[1] * PAINT_R * scale;
+    const GAP = 16 * scale;
+    let c2 = rMax(2) + 24 * scale;
+    let c1 = c2 + rMax(2) + rMax(1) + GAP;
+    let c0 = c1 + rMax(1) + rMax(0) + GAP;
+
+    /* The stripes are sized in pixels, so on a tall phone they would all sit in
+       the bottom third and leave a void under the title. Lift the whole stack
+       until its tallest flower sits just below the hub — never downwards, so
+       the front band always keeps its footing on the ground. */
+    const stackTop = c0 + rMax(0);
+    const wantTop = innerHeight - hub.getBoundingClientRect().bottom - 72;
+    const lift = Math.max(0, wantTop - stackTop);
+    const centres = [c0 + lift, c1 + lift, c2 + lift];
+
+    BANDS.forEach((B, bi) => {
+      const step = B.spacing * scale, share = Math.ceil(items.length / 3);
+      let x = (gBands[bi].dataset.x ? +gBands[bi].dataset.x : -40 * scale);
+      for (let k = 0; k < share; k++) {
+        const L = items[k * 3 + bi];
+        if (!L) break;
+        const r = rng(seedHash(L.id + bi + k));
+        const size = (B.size[0] + r() * (B.size[1] - B.size[0])) * scale;
+        x += step * (.72 + r() * .62);
+        /* Only a flower smaller than its band's largest has room to move, and
+           only into the slack it leaves — so the stripe is never breached. */
+        const slack = Math.max(0, rMax(bi) - size * PAINT_R);
+        const bottom = centres[bi] + (r() - .5) * 2 * slack - size / 2;
+
+        const stalkH = bottom + size / 2 - 22;
+        if (stalkH > 16) {
+          const sv = document.createElementNS(NS, 'svg');
+          sv.setAttribute('class', 'stalks');
+          sv.setAttribute('viewBox', '0 0 70 ' + stalkH);
+          sv.style.cssText = 'left:' + (x - 35) + 'px;bottom:22px;top:auto;width:70px;height:' + stalkH + 'px;';
+          const pa = document.createElementNS(NS, 'path');
+          pa.setAttribute('d', 'M35 ' + stalkH + ' Q' + (35 + (r() - .5) * 30) + ' ' + (stalkH * .5) + ' 35 0');
+          pa.setAttribute('fill', 'none');
+          pa.setAttribute('stroke', bi === 2 ? '#5d7440' : (bi === 1 ? '#68794f' : '#7b8862'));
+          pa.setAttribute('stroke-opacity', String(.34 + bi * .2));
+          pa.setAttribute('stroke-width', String((1.3 + bi * .9) * scale));
+          pa.setAttribute('stroke-linecap', 'round');
+          sv.appendChild(pa); gBands[bi].appendChild(sv);
+        }
+
+        const el = document.createElement('button');
+        el.className = 'bloom';
+        el.setAttribute('aria-label', 'Open a letter — ' + FLOWERS[L.flower].label);
+        el.style.cssText = 'left:' + (x - size / 2) + 'px;bottom:' + bottom + 'px;width:' + size + 'px;height:' + size + 'px;'
+          + 'opacity:' + B.opacity + ';--lean:' + ((r() - .5) * 12).toFixed(1) + 'deg;--amp:' + (1 + r() * 2).toFixed(2) + 'deg;'
+          + '--dur:' + (4.5 + r() * 4).toFixed(2) + 's;--delay:' + (-r() * 6).toFixed(2) + 's;z-index:' + Math.round(size) + ';';
+        /* colours go on the flower, never on :root — on :root the whole page
+           could only ever show one flower colour */
+        for (const [prop, val] of Object.entries(bloomVars(FLOWERS[L.flower]))) el.style.setProperty(prop, val);
+        el.innerHTML = renderBloomSVG(FLOWERS[L.flower], 'g' + (gUid++));
+        el._letter = L;
+        if (justPlantedId && L.id === justPlantedId) {
+          justPlantedId = null;
+          el.classList.add('just-planted');
+          // hand the flower back to the shared sway rule once it has opened
+          el.addEventListener('animationend', () => el.classList.remove('just-planted'), { once: true });
+        }
+        gBands[bi].appendChild(el);
+      }
+      gBands[bi].dataset.x = x;
+      if (bi === 2) contentW = x + innerWidth * .5;
+    });
+    strip.style.width = contentW + 'px';
+  }
+
+  let gTicking = false;
+  function onGardenScroll() {
+    if (gTicking) return; gTicking = true;
+    requestAnimationFrame(() => {
+      const sl = bed.scrollLeft;
+      BANDS.forEach((B, i) => { gBands[i].style.transform = 'translateX(' + (sl * (1 - B.rate)) + 'px)'; });
+      arrowL.classList.toggle('on', sl > 40);
+      const atEnd = sl + bed.clientWidth > bed.scrollWidth - 60;
+      arrowR.classList.toggle('on', !atEnd && !gDone);
+      if (sl + bed.clientWidth > bed.scrollWidth - innerWidth * 1.5) loadMore();
+      gTicking = false;
+    });
+  }
+
+  /* Dress the shared sheet for one garden letter. Vars land on .flyer, not
+     :root, so the garden's own blooms keep their colours. */
+  function dressFlyer(L) {
+    const key = L.flower in FLOWERS ? L.flower : DEFAULTS.f;
+    const f = FLOWERS[key];
+    for (const [prop, val] of Object.entries(bloomVars(f))) flyer.style.setProperty(prop, val);
+    flyer.querySelectorAll('[data-bloom]').forEach(host => { host.innerHTML = renderBloomSVG(f, 'f' + (gUid++)); });
+    render({ v: DEFAULTS.v, o: L.open, b: L.body, s: L.sign, f: key });
+  }
+
+  const FINAL = () => Math.max(190, Math.min(innerWidth * .56, innerHeight * .44, 500));
+  let current = null, busy = false;
+  let moved = 0;
+
+  function openLetter(el) {
+    if (busy || current) return; busy = true;
+    const L = el._letter, S = FINAL();
+    flyer.style.setProperty('--S', S + 'px');
+    dressFlyer(L);
+
+    const r = el.getBoundingClientRect();
+    flyer.classList.remove('moving');
+    flyer.style.transform = 'translate(' + (r.left + r.width / 2 - innerWidth / 2) + 'px,'
+      + (r.top + r.height / 2 - innerHeight / 2) + 'px) scale(' + (r.width / S) + ')';
+    flyer.classList.add('live');
+    el.classList.add('picked');
+    veil.classList.add('on');
+    hub.classList.add('dim');
+    toolCopy.textContent = 'copy letter link';
+
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      flyer.classList.add('moving');
+      flyer.style.transform = 'translate(0px,0px) scale(1)';
+      /* the fold only starts once the flight is over — running both at once
+         makes the two animations fight */
+      setTimeout(() => {
+        setOpen(true);
+        closer.classList.add('on');
+        tools.classList.add('on');
+        current = { el, L }; busy = false;
+        scene.focus();
+      }, 800);
+    }));
+  }
+
+  function closeLetter(removeFlower) {
+    if (busy || !current) return; busy = true;
+    const { el } = current;
+    tools.classList.remove('on');
+    setOpen(false);
+    setTimeout(() => {
+      if (removeFlower) {
+        // reported: don't fly home to a flower that should no longer be there
+        flyer.classList.remove('moving');
+        flyer.style.opacity = '0';
+        el.remove();
+      } else {
+        const r = el.getBoundingClientRect(), S = FINAL();
+        flyer.style.transform = 'translate(' + (r.left + r.width / 2 - innerWidth / 2) + 'px,'
+          + (r.top + r.height / 2 - innerHeight / 2) + 'px) scale(' + (r.width / S) + ')';
+      }
+      veil.classList.remove('on'); hub.classList.remove('dim'); closer.classList.remove('on');
+      setTimeout(() => {
+        flyer.classList.remove('live', 'moving');
+        flyer.style.opacity = '';
+        if (!removeFlower) el.classList.remove('picked');
+        current = null; busy = false;
+      }, 780);
+    }, 1150);
+  }
+
+  let toastTimer;
+  function toast(msg, ms = 3200) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('on'), ms);
+  }
+
+  /* Must be called straight from a click. The async clipboard API is refused
+     once the gesture has been spent — notably in Safari after an await — so
+     callers start this first and await it later. execCommand is the fallback
+     for insecure contexts and older browsers; there is no visible input in the
+     garden to fall back to selecting. */
+  function copyToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text).catch(() => legacyCopy(text));
+    }
+    return legacyCopy(text);
+  }
+  function legacyCopy(text) {
+    return new Promise((resolve, reject) => {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:-9999px;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch { ok = false; }
+      ta.remove();
+      ok ? resolve() : reject(new Error('copy refused'));
+    });
+  }
+
+  function startGarden() {
+    document.body.classList.add('garden');
+    gardenEl.hidden = false;
+
+    bed.addEventListener('scroll', onGardenScroll, { passive: true });
+    bed.addEventListener('wheel', e => {
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+      e.preventDefault(); bed.scrollLeft += e.deltaY;
+    }, { passive: false });
+
+    let down = false, startX = 0, startL = 0;
+    bed.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') return;
+      down = true; moved = 0; startX = e.clientX; startL = bed.scrollLeft; bed.classList.add('dragging'); });
+    addEventListener('pointermove', e => { if (!down) return; const d = e.clientX - startX; moved = Math.abs(d); bed.scrollLeft = startL - d; });
+    addEventListener('pointerup', () => { down = false; bed.classList.remove('dragging'); });
+
+    const page = () => Math.max(280, bed.clientWidth * .72);
+    arrowL.onclick = () => bed.scrollBy({ left: -page(), behavior: 'smooth' });
+    arrowR.onclick = () => bed.scrollBy({ left: page(), behavior: 'smooth' });
+
+    document.addEventListener('click', e => {
+      if (moved > 6) return;                       // a pan is not a click
+      if (e.target.closest('#tools')) return;
+      const b = e.target.closest('.bloom');
+      if (b && !current) { openLetter(b); return; }
+      if (current && (e.target.closest('#scene') || e.target.closest('#closer') || e.target === veil)) closeLetter();
+    });
+    addEventListener('keydown', e => {
+      if (e.key === 'Escape' && current) closeLetter();
+      if ((e.key === 'Enter' || e.key === ' ') && current && document.activeElement === scene) {
+        e.preventDefault(); closeLetter();
+      }
+    });
+    addEventListener('resize', () => { onGardenScroll(); if (current) queueRefit(); });
+    document.getElementById('retry').addEventListener('click', () => { show(stError, false); loadMore(); });
+
+    toolCopy.addEventListener('click', () => {
+      if (!current) return;
+      const url = letterUrl(current.L);
+      copyToClipboard(url).then(
+        () => { toolCopy.textContent = 'link copied'; toast('Link copied \u2014 paste it anywhere.'); },
+        () => toast('Could not copy. The letter lives at ' + url)
+      );
+    });
+
+    toolReport.addEventListener('click', async () => {
+      if (!current) return;
+      const { L } = current;
+      if (!confirm('Report this letter as abusive or unsafe?\n\nIt is hidden once two people report it.')) return;
+      toolReport.disabled = true;
+      try {
+        const res = await fetch(WALL_ENDPOINT + '/' + encodeURIComponent(L.id) + '/report', { method: 'POST' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        toast('Thank you — this has been reported.');
+        closeLetter(true);
+      } catch (err) {
+        toast('Could not send that report.');
+        console.warn('[wall]', err);
+      } finally {
+        toolReport.disabled = false;
+      }
+    });
+
+    loadMore();
+  }
+
+  boot();
 
   /* the square changes size with the viewport, and Caveat lands late */
   addEventListener('resize', queueRefit);

@@ -13,4 +13,4 @@ database_name = "paperbloom"
 database_id = "dd1a739c-b1c9-448e-9bb7-72780e12401a"
 
 [vars]
-ALLOWED_ORIGIN = "https://REPLACE-WITH-YOUR-DOMAIN"
+ALLOWED_ORIGIN = "https://flowers-letters.titiarimba.workers.dev"
